@@ -41,7 +41,7 @@ public class MainForm {
         GridBagLayout layout = new GridBagLayout();
         mainPanel.setLayout(layout);
 
-        mainPanel.setBackground(new Color(0x000000));
+        mainPanel.setBackground(new Color(0x3D3E3A));
 
         loginLabel = new JLabel("Enter your login:");
         loginLabel.setForeground(Color.WHITE);
@@ -60,14 +60,14 @@ public class MainForm {
         //remoteLoginTextField.setForeground(new Color(0xFF6504));
 
         connectButton = new JButton("Connect");
-        connectButton.setBackground(new Color(0x000000));
+        connectButton.setBackground(new Color(0x33AD54));
         connectButton.setForeground(Color.WHITE);
-        connectButton.setBorder(new LineBorder(Color.WHITE, 2));
+        connectButton.setBorder(new LineBorder(new Color(0x318040), 1));
 
         applyButton = new JButton("Apply");
         applyButton.setForeground(Color.WHITE);
-        applyButton.setBorder(new LineBorder(Color.WHITE, 2));
-        applyButton.setBackground(new Color(0x000000));
+        applyButton.setBorder(new LineBorder(new Color(0x8F5527), 1));
+        applyButton.setBackground(new Color(0xCB7832));
 
         remoteAddressLabel = new JLabel("Enter remote address:");
         remoteAddressLabel.setForeground(Color.WHITE);
@@ -78,24 +78,27 @@ public class MainForm {
         //remoteAddressTextField.setForeground(new Color(0xFF6504));
 
         disconnectButton = new JButton("Disconnect");
-        disconnectButton.setBackground(new Color(0x000000));
+        disconnectButton.setBackground(new Color(0xDD5140));
         disconnectButton.setForeground(Color.WHITE);
-        disconnectButton.setBorder(new LineBorder(Color.WHITE, 2));
+        disconnectButton.setBorder(new LineBorder(new Color(0x943D30), 1));
 
         messagesArea = new JTextArea();
         messagesArea.setEditable(false);
         messagesArea.setLineWrap(true);
-        //messagesArea.setBackground(new Color(0x3D3E3A));
-        //messagesArea.setForeground(new Color(0xFF6504));
+        messagesArea.setBackground(new Color(0x2B2B2B));
+        messagesArea.setForeground(new Color(0xC97832));
+        messagesArea.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 2));
 
         yourMessageArea = new JTextArea();
-        //yourMessageArea.setBackground(new Color(0x3D3E3A));
-        //yourMessageArea.setForeground(new Color(0xFF6504));
+        yourMessageArea.setBackground(new Color(0x2B2B2B));
+        yourMessageArea.setForeground(new Color(0xCA7832));
+        Insets insets = yourMessageArea.getInsets();
+        yourMessageArea.setBorder(BorderFactory.createEmptyBorder(2, 5, insets.bottom, 2));
 
         sendButton = new JButton("Send");
-        sendButton.setBackground(new Color(0x000000));
+        sendButton.setBackground(new Color(0x2A2D2F));
         sendButton.setForeground(Color.WHITE);
-        sendButton.setBorder(new LineBorder(Color.WHITE, 2));
+        sendButton.setBorder(new LineBorder(Color.WHITE, 1));
 
         messagesScrollPane = new JScrollPane(messagesArea);
         messagesScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
