@@ -3,6 +3,7 @@ import sun.plugin2.message.Message;
 import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.nio.ByteBuffer;
 
 public class Connection {
     private Socket socket;
@@ -15,27 +16,27 @@ public class Connection {
     public void SendNickHello(String nick) throws IOException {
         OutputStream sout = socket.getOutputStream();
         DataOutputStream out = new DataOutputStream(sout);
-        out.write(("ChatApp 2015 user " + nick + 0x0a).getBytes());
+        out.write(("ChatApp 2015 user " + nick + '\n').getBytes());
     }
 
     public void SendNickBusy(String nick) throws IOException {
         OutputStream sout = socket.getOutputStream();
         DataOutputStream out = new DataOutputStream(sout);
-        out.write(("ChatApp 2015 user " + nick + " busy" + 0x0a).getBytes());
+        out.write(("ChatApp 2015 user " + nick + " busy" + '\n').getBytes());
     }
 
     public void sendMessage(String message) throws IOException {
         OutputStream sout = socket.getOutputStream();
         DataOutputStream out = new DataOutputStream(sout);
-        out.write(("Message" + 0x0a).getBytes());
-        out.write(message.getBytes());
+        out.write(("Message" + '\n').getBytes());
+        out.write((message + '\n').getBytes());
         out.flush();
     }
 
     public void disconnect() throws IOException {
         OutputStream sout = socket.getOutputStream();
         DataOutputStream out = new DataOutputStream(sout);
-        out.write(("Disconnect" + 0x0a).getBytes());
+        out.write(("Disconnect" + '\n').getBytes());
         socket.close();
     }
 
@@ -43,7 +44,7 @@ public class Connection {
         if (socket.isConnected()) {
             OutputStream sout = socket.getOutputStream();
             DataOutputStream out = new DataOutputStream(sout);
-            out.write(("Accepted" + 0x0a).getBytes());
+            out.write(("Accepted" + '\n').getBytes());
         }
     }
 
@@ -51,7 +52,7 @@ public class Connection {
         if (!socket.isConnected()) {
             OutputStream sout = socket.getOutputStream();
             DataOutputStream out = new DataOutputStream(sout);
-            out.write(("Rejected" + 0x0a).getBytes());
+            out.write(("Rejected" + '\n').getBytes());
         }
     }
 
@@ -59,71 +60,57 @@ public class Connection {
         socket.close();
     }
 
-    public Command receive() throws IOException {
+    public Command receive() throws IOException{
         String text = "";
-        String textOriginalcase = "";
         int b;
+        StringBuffer stringBuffer = new StringBuffer();
         InputStream sin = socket.getInputStream();
         DataInputStream in = new DataInputStream(sin);
         while (true) {
-            if ((b = in.read()) == +0x0a) {
-                text = text.toUpperCase();
+            if ((b = in.read()) == 0x0a) {
+                text = stringBuffer.toString().toUpperCase();
                 if (text.equals("MESSAGE")) {
-                    text = "";
+                    stringBuffer = new StringBuffer();
                     while (true) {
-                        if ((b = in.read()) == +0x0a) {
+                        if ((b = in.read()) == 0x0a) {
                             break;
                         } else
-                            text += (char) b;
+                            stringBuffer.append((char)b);
                     }
-                    return new MessageCommand(text);
+                    return new MessageCommand(stringBuffer.toString());
                 } else {
-                    if (text.equals("ACCEPT") || text.equals("DISCONNECT") || text.equals("REJECT")) {
-                        return new Command(Command.CommandType.valueOf(text));
+                    if (((text.length()==8)&&(text.startsWith("ACCEPT")||text.startsWith("REJECT"))&&text.endsWith("ED"))||(text.startsWith("DISCONNECT")&&text.length()==10)) {
+                        if (text.endsWith("ED")){
+                            text=text.replace("ED","");
+                            return new Command(Command.CommandType.valueOf(text));
+                        }
+                        else
+                            return new Command(Command.CommandType.valueOf(text));
                     } else {
-                        String VERSIONupperCase = VERSION.toUpperCase(); //my version in UpperCase
-                        /*for (int i = 0; i < VERSION.length(); i++) {
-                          if (VERSIONcase.charAt(i) != text.charAt(i)) {
-                            return null;
+                        if (text.startsWith(VERSION.toUpperCase()+" USER ")){
+                            if (text.endsWith("BUSY")){
+                                String nick=stringBuffer.toString().substring(stringBuffer.toString().indexOf("user ")+"user ".length(),stringBuffer.toString().indexOf(" busy"));
+                                //String nick=text.substring(text.indexOf("USER ")+"USER ".length(),text.indexOf(" BUSY"));
+                                return new NickCommand(VERSION,nick.toLowerCase(),true);
                             }
-                        }*/
-                        text = text + " ";
-                        textOriginalcase = textOriginalcase + " ";
-                        String s[] = text.split(" ");
-                        if (s.length == 5) {
-                            if (VERSIONupperCase.equals(s[0] + " " + s[1]) && s[2].equals("USER") && s[4].equals("BUSY")) {
-                                int ind = (VERSION+" "+"USER"+" ").length();
-                                String nick = "";
-                                while (textOriginalcase.charAt(ind) != ' ') {
-                                    nick += textOriginalcase.charAt(ind);
-                                    ind++;
-                                }
-                                return new NickCommand(VERSION, nick, true);
-                            }
-                        } else {
-                            if (s.length == 4) {
-                                if (VERSIONupperCase.equals(s[0] + " " + s[1]) && s[2].equals("USER")) {
-                                    int ind = (VERSION+" "+"USER"+" ").length();
-                                    String nick = "";
-                                    while (textOriginalcase.charAt(ind) != ' ') {
-                                        nick += textOriginalcase.charAt(ind);
-                                        ind++;
-                                    }
-                                    return new NickCommand(VERSION, nick, false);
-                                }
+                            else{
+                                String nick=stringBuffer.toString().substring(stringBuffer.toString().indexOf("user ")+"user ".length());
+                                //String nick=text.substring(text.indexOf("USER ")+"USER ".length());
+                                return new NickCommand(VERSION,nick.toLowerCase(),false);
                             }
                         }
                     }
                 }
-                text = "";
-                textOriginalcase = "";
+            text="";
+            stringBuffer = new StringBuffer();
             } else {
-                text += (char) b;
-                textOriginalcase += (char) b;
+                stringBuffer.append((char)b);
             }
         }
     }
 
     public static void main(String[] args) throws IOException {
+
     }
 }
+
