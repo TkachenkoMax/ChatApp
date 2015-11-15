@@ -2,6 +2,7 @@ import javax.swing.*;
 import javax.swing.border.LineBorder;
 import javax.xml.soap.Text;
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.io.IOException;
 
 public class MainForm {
@@ -17,7 +18,7 @@ public class MainForm {
     private JTextField remoteAddressTextField;
     private JButton disconnectButton;
     private JTextArea messagesArea;
-    private JTextArea yourMessageArea;
+    private JTextField yourMessageField;
     private JButton sendButton;
     public JScrollPane messagesScrollPane;
     public JScrollPane yourMessageScrollPane;
@@ -48,16 +49,12 @@ public class MainForm {
         loginLabel.setHorizontalAlignment(SwingConstants.RIGHT);
 
         loginTextField = new JTextField();
-        //loginTextField.setBackground(new Color(0x3D3E3A));
-        //loginTextField.setForeground(new Color(0xFF6504));
 
         remoteLoginLabel = new JLabel("Enter remote login:");
         remoteLoginLabel.setForeground(Color.WHITE);
         remoteLoginLabel.setHorizontalAlignment(SwingConstants.RIGHT);
 
         remoteLoginTextField = new JTextField();
-        //remoteLoginTextField.setBackground(new Color(0x3D3E3A));
-        //remoteLoginTextField.setForeground(new Color(0xFF6504));
 
         connectButton = new JButton("Connect");
         connectButton.setBackground(new Color(0x33AD54));
@@ -74,13 +71,12 @@ public class MainForm {
         remoteAddressLabel.setHorizontalAlignment(SwingConstants.RIGHT);
 
         remoteAddressTextField = new JTextField();
-        //remoteAddressTextField.setBackground(new Color(0x3D3E3A));
-        //remoteAddressTextField.setForeground(new Color(0xFF6504));
 
         disconnectButton = new JButton("Disconnect");
         disconnectButton.setBackground(new Color(0xDD5140));
         disconnectButton.setForeground(Color.WHITE);
         disconnectButton.setBorder(new LineBorder(new Color(0x943D30), 1));
+        disconnectButton.setEnabled(false);
 
         messagesArea = new JTextArea();
         messagesArea.setEditable(false);
@@ -89,21 +85,23 @@ public class MainForm {
         messagesArea.setForeground(new Color(0xC97832));
         messagesArea.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 2));
 
-        yourMessageArea = new JTextArea();
-        yourMessageArea.setBackground(new Color(0x2B2B2B));
-        yourMessageArea.setForeground(new Color(0xCA7832));
-        Insets insets = yourMessageArea.getInsets();
-        yourMessageArea.setBorder(BorderFactory.createEmptyBorder(2, 5, insets.bottom, 2));
+        yourMessageField = new JTextField();
+        yourMessageField.setBackground(new Color(0x2B2B2B));
+        yourMessageField.setForeground(new Color(0xCA7832));
+        Insets insets = yourMessageField.getInsets();
+        yourMessageField.setBorder(BorderFactory.createEmptyBorder(2, 5, insets.bottom, 2));
+        yourMessageField.setEditable(false);
 
         sendButton = new JButton("Send");
         sendButton.setBackground(new Color(0x2A2D2F));
         sendButton.setForeground(Color.WHITE);
         sendButton.setBorder(new LineBorder(Color.WHITE, 1));
+        sendButton.setEnabled(false);
 
         messagesScrollPane = new JScrollPane(messagesArea);
         messagesScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
 
-        yourMessageScrollPane = new JScrollPane(yourMessageArea);
+        yourMessageScrollPane = new JScrollPane(yourMessageField);
         yourMessageScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
 
         mainPanel.add(loginLabel, new GridBagConstraints(0, 0, 1, 1, 1, 0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(2, 2, 2, 2), 0, 0));
@@ -120,6 +118,26 @@ public class MainForm {
         mainPanel.add(sendButton, new GridBagConstraints(5, 3, 1, 1, 1, 0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(2, 2, 2, 2), 0, 0));
 
         mainFrame.add(mainPanel);
+
+        connectButton.addActionListener(new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                connectButton.setEnabled(false);
+                disconnectButton.setEnabled(true);
+                sendButton.setEnabled(true);
+                yourMessageField.setEditable(true);
+            }
+        });
+
+        disconnectButton.addActionListener(new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                connectButton.setEnabled(true);
+                disconnectButton.setEnabled(false);
+                sendButton.setEnabled(false);
+                yourMessageField.setEditable(false);
+            }
+        });
     }
 
     public static void main(String[] args) throws IOException {

@@ -1,4 +1,5 @@
 import java.io.IOException;
+import java.net.Socket;
 import java.net.SocketAddress;
 import java.util.StringJoiner;
 
@@ -22,20 +23,19 @@ public class Caller {
     }
 
     public Caller() {
-        localNick = "username1";
-        remoteNick = "username2";
+        remoteNick = "Username";
         ip = "8.8.4.4";
     }
 
     public Caller(String localNick) {
         this.localNick = localNick;
-        remoteNick = "username2";
+        //remoteNick = "username2";
         ip = "8.8.4.4";
     }
 
     public Caller(String localNick, SocketAddress remoteAddress) {
         this.localNick = localNick;
-        remoteNick = "username2";
+        //remoteNick = "username2";
         ip = "8.8.4.4";
         this.remoteAddress = remoteAddress;
     }
@@ -43,13 +43,20 @@ public class Caller {
     public Caller(String localNick, String ip) {
         this.localNick = localNick;
         this.ip = ip;
-        remoteNick = "username2";
+        //remoteNick = "username2";
     }
 
     public Connection call() throws IOException {
-        return null;
+        try {
+            Socket socket = new Socket();
+            socket.connect(this.remoteAddress);
+            Connection connection = new Connection(socket);
+            return connection;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
-
 
     public String getLicalNick() {
         return localNick;
@@ -77,6 +84,6 @@ public class Caller {
 
     @Override
     public String toString() {
-        return "Some text here";
+        return "Local nick: " + localNick + ", IP: " + ip + ", remote nick: " + remoteNick + ", remote address: " + remoteAddress;
     }
 }

@@ -3,44 +3,114 @@ import sun.plugin2.message.Message;
 import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.nio.ByteBuffer;
 
 public class Connection {
     private Socket socket;
-    public Connection(Socket socket){
-        this.socket=socket;
+    private static final String VERSION = "ChatApp 2015";
+
+    public Connection(Socket socket) {
+        this.socket = socket;
     }
+
     public void SendNickHello(String nick) throws IOException {
-        sendMessage("ChatApp 2015 user "+nick);
-    }
-    public void SendNickBusy(String nick) throws IOException {
-        sendMessage("ChatApp 2015 user "+nick+" busy");
-    }
-    public void sendMessage(String message)throws IOException{
         OutputStream sout = socket.getOutputStream();
         DataOutputStream out = new DataOutputStream(sout);
-        out.writeUTF(message);
+        out.write(("ChatApp 2015 user " + nick + '\n').getBytes());
+    }
+
+    public void SendNickBusy(String nick) throws IOException {
+        OutputStream sout = socket.getOutputStream();
+        DataOutputStream out = new DataOutputStream(sout);
+        out.write(("ChatApp 2015 user " + nick + " busy" + '\n').getBytes());
+    }
+
+    public void sendMessage(String message) throws IOException {
+        OutputStream sout = socket.getOutputStream();
+        DataOutputStream out = new DataOutputStream(sout);
+        out.write(("Message" + '\n').getBytes());
+        out.write((message + '\n').getBytes());
         out.flush();
     }
-    public void disconnect()throws IOException{
-        sendMessage("Disconnect");
+
+    public void disconnect() throws IOException {
+        OutputStream sout = socket.getOutputStream();
+        DataOutputStream out = new DataOutputStream(sout);
+        out.write(("Disconnect" + '\n').getBytes());
         socket.close();
     }
-    public void accept() throws IOException{
-        if (socket.isConnected()) sendMessage("Accepted");
+
+    public void accept() throws IOException {
+        if (socket.isConnected()) {
+            OutputStream sout = socket.getOutputStream();
+            DataOutputStream out = new DataOutputStream(sout);
+            out.write(("Accepted" + '\n').getBytes());
+        }
     }
+
     public void reject() throws IOException {
-        if (!socket.isConnected()) sendMessage("Connection closed by foreign host.");
+        if (!socket.isConnected()) {
+            OutputStream sout = socket.getOutputStream();
+            DataOutputStream out = new DataOutputStream(sout);
+            out.write(("Rejected" + '\n').getBytes());
+        }
     }
+
     public void close() throws IOException {
         socket.close();
     }
-    public Command receive() throws IOException {
-        InputStream sin=socket.getInputStream();
-        DataInputStream in=new DataInputStream(sin);
-        String line=in.readUTF();
-        return new Command(line);
+
+    public Command receive() throws IOException{
+        String text = "";
+        int b;
+        StringBuffer stringBuffer = new StringBuffer();
+        InputStream sin = socket.getInputStream();
+        DataInputStream in = new DataInputStream(sin);
+        while (true) {
+            if ((b = in.read()) == 0x0a) {
+                text = stringBuffer.toString().toUpperCase();
+                if (text.equals("MESSAGE")) {
+                    stringBuffer = new StringBuffer();
+                    while (true) {
+                        if ((b = in.read()) == 0x0a) {
+                            break;
+                        } else
+                            stringBuffer.append((char)b);
+                    }
+                    return new MessageCommand(stringBuffer.toString());
+                } else {
+                    if (((text.length()==8)&&(text.startsWith("ACCEPT")||text.startsWith("REJECT"))&&text.endsWith("ED"))||(text.startsWith("DISCONNECT")&&text.length()==10)) {
+                        if (text.endsWith("ED")){
+                            text=text.replace("ED","");
+                            return new Command(Command.CommandType.valueOf(text));
+                        }
+                        else
+                            return new Command(Command.CommandType.valueOf(text));
+                    } else {
+                        if (text.startsWith(VERSION.toUpperCase()+" USER ")){
+                            if (text.endsWith("BUSY")){
+                                String nick=stringBuffer.toString().substring(stringBuffer.toString().indexOf("user ")+"user ".length(),stringBuffer.toString().indexOf(" busy"));
+                                //String nick=text.substring(text.indexOf("USER ")+"USER ".length(),text.indexOf(" BUSY"));
+                                return new NickCommand(VERSION,nick.toLowerCase(),true);
+                            }
+                            else{
+                                String nick=stringBuffer.toString().substring(stringBuffer.toString().indexOf("user ")+"user ".length());
+                                //String nick=text.substring(text.indexOf("USER ")+"USER ".length());
+                                return new NickCommand(VERSION,nick.toLowerCase(),false);
+                            }
+                        }
+                    }
+                }
+            text="";
+            stringBuffer = new StringBuffer();
+            } else {
+                stringBuffer.append((char)b);
+            }
+        }
     }
-    public static void main(String [] args) throws IOException {
-        Connection c=new Connection(new Socket("37.139.31.24",28411));
+
+    public static void main(String[] args) throws IOException {
+
     }
 }
+
