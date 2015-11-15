@@ -1,14 +1,16 @@
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.io.IOException;
 import java.net.SocketAddress;
 
 public class CallListener{
-  public String localNick;
-  public String localAdress;
-    private Socket socket;
+    private final int Port = 44444;
+    private final String IP = "127.0.0.1";
+    private String localNick;
+    private SocketAddress listenAddress,remoteAddress;
+    private String remoteNick;
     private ServerSocket servSocket;
-   Connection con=new Connection(servSocket.accept(),localNick);
     private boolean isBusy;
 
     public CallListener(){
@@ -19,14 +21,30 @@ public class CallListener{
         this.localNick=localNick;
     }
 
-    public CallListener(String localNick, String localAdress)throws IOException{
+    public CallListener(String localNick, String lockalIP)throws IOException{
         this.localNick=localNick;
-        this.localAdress=localAdress;
+        this.listenAddress=new InetSocketAddress(IP,Port);
 
     }
 
-    public Connection getConnection() throws IOException{
-        return Connection();//в разработке
+    public Connection getConnection() throws IOException {
+      ServerSocket servSocket = new ServerSocket(Port);
+      Socket socket = servSocket.accept();
+        Connection con=new Connection(socket);
+        if(isBusy){
+            try {
+                con.SendNickBusy(localNick);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            con.close();
+            return null;
+        }
+        else {
+            remoteAddress=socket.getRemoteSocketAddress();
+            con.SendNickHello(localNick);
+            return con;
+        }
     }
 
     public String getLocalNick(){
@@ -38,11 +56,11 @@ public class CallListener{
     }
 
     public SocketAddress getListenAddress() throws IOException {
-        return null;
+        return servSocket.getLocalSocketAddress();
     }
 
     public String getRemoteNick()throws IOException {
-        return null;
+        return this.remoteNick;
     }
 
     public SocketAddress getRemoteAdress() throws IOException {
@@ -58,11 +76,11 @@ public class CallListener{
     }
 
     public void setListenAddress(SocketAddress listenAddress){
-
+       this.listenAddress=listenAddress;
     }
 
     public String toString() {
-    return localNick + localAdress;
+    return localNick + " " + listenAddress;
     }
 
     public static void main(String[] args) {
