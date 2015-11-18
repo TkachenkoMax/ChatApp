@@ -1,3 +1,5 @@
+import sun.print.resources.serviceui_zh_CN;
+
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketAddress;
@@ -8,7 +10,9 @@ public class Caller {
     private String localNick;
     private SocketAddress remoteAddress;
     private String remoteNick;
+    private boolean isBusy;
     private String ip;
+    private static final int PORT = 28411;
 
     public static enum CallStatus {
         BUSY, NO_SERVICE, NOT_ACCESSIBLE, OK, REJECTED
@@ -29,28 +33,32 @@ public class Caller {
 
     public Caller(String localNick) {
         this.localNick = localNick;
-        //remoteNick = "username2";
         ip = "8.8.4.4";
     }
 
     public Caller(String localNick, SocketAddress remoteAddress) {
         this.localNick = localNick;
-        //remoteNick = "username2";
-        ip = "8.8.4.4";
+        this.ip = "8.8.4.4";
         this.remoteAddress = remoteAddress;
     }
 
     public Caller(String localNick, String ip) {
         this.localNick = localNick;
         this.ip = ip;
-        //remoteNick = "username2";
     }
 
     public Connection call() throws IOException {
         try {
-            Socket socket = new Socket();
-            socket.connect(this.remoteAddress);
+            Socket socket = new Socket(ip, PORT);
+            socket.connect(socket.getRemoteSocketAddress());
             Connection connection = new Connection(socket);
+            NickCommand command = (NickCommand) connection.receive();
+            remoteNick = command.getNick();
+            isBusy = command.isBusy();
+            if (isBusy) {
+                connection.close();
+            } else
+                connection.SendNickHello(localNick);
             return connection;
         } catch (IOException e) {
             e.printStackTrace();
@@ -58,7 +66,7 @@ public class Caller {
         }
     }
 
-    public String getLicalNick() {
+    public String getLocalNick() {
         return localNick;
     }
 
@@ -85,5 +93,14 @@ public class Caller {
     @Override
     public String toString() {
         return "Local nick: " + localNick + ", IP: " + ip + ", remote nick: " + remoteNick + ", remote address: " + remoteAddress;
+    }
+
+    public static void main(String[] args) throws IOException {
+        Caller c = new Caller("Kostya", "109.87.26.248");
+        Connection connection = c.call();
+
+        System.out.println(connection.receive().toString());
+        System.out.println(connection.receive().toString());
+        connection.sendMessage("Congratulation!");
     }
 }

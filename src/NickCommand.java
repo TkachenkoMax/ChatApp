@@ -12,4 +12,16 @@ public class NickCommand extends Command{
         if (busy) return version+" user "+nick+" busy";
         else return version+" user "+nick;
     }
+
+    public String getVersion() {
+        return version;
+    }
+
+    public boolean isBusy() {
+        return busy;
+    }
+
+    public String getNick() {
+        return nick;
+    }
 }

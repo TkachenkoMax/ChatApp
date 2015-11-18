@@ -1,14 +1,11 @@
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.net.*;
 import java.io.IOException;
-import java.net.SocketAddress;
 
 public class CallListener{
-    private final int Port = 44444;
+    private static final int PORT = 28411;
     private final String IP = "127.0.0.1";
     private String localNick;
-    private SocketAddress listenAddress,remoteAddress;
+    private InetAddress listenAddress,remoteAddress;
     private String remoteNick;
     private ServerSocket servSocket;
     private boolean isBusy;
@@ -23,28 +20,31 @@ public class CallListener{
 
     public CallListener(String localNick, String lockalIP)throws IOException{
         this.localNick=localNick;
-        this.listenAddress=new InetSocketAddress(IP,Port);
+        this.listenAddress=InetAddress.getLocalHost();
 
     }
 
     public Connection getConnection() throws IOException {
-      ServerSocket servSocket = new ServerSocket(Port);
+      ServerSocket servSocket = new ServerSocket(PORT);
       Socket socket = servSocket.accept();
-        Connection con=new Connection(socket);
-        if(isBusy){
+      Connection connection=new Connection(socket);
+      connection.SendNickHello(localNick);
+      NickCommand command=(NickCommand)connection.receive();
+      remoteNick=command.getNick();
+      remoteAddress=socket.getInetAddress();
+      if(isBusy()){
             try {
-                con.SendNickBusy(localNick);
+                connection.SendNickBusy(localNick);
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            con.close();
+            connection.close();
             return null;
-        }
-        else {
-            remoteAddress=socket.getRemoteSocketAddress();
-            con.SendNickHello(localNick);
-            return con;
-        }
+      }
+      else {
+            connection.SendNickHello(localNick);
+            return connection;
+      }
     }
 
     public String getLocalNick(){
@@ -52,7 +52,8 @@ public class CallListener{
     }
 
     public boolean isBusy(){
-        return servSocket.isBound();
+        isBusy=servSocket.isBound();
+        return isBusy;
     }
 
     public SocketAddress getListenAddress() throws IOException {
@@ -75,7 +76,7 @@ public class CallListener{
         this.isBusy=isBusy;
     }
 
-    public void setListenAddress(SocketAddress listenAddress){
+    public void setListenAddress(InetAddress listenAddress){
        this.listenAddress=listenAddress;
     }
 
@@ -83,8 +84,21 @@ public class CallListener{
     return localNick + " " + listenAddress;
     }
 
-    public static void main(String[] args) {
-
+    public static void main(String[] args) throws IOException{
+        /*ServerSocket servSocket = new ServerSocket(28411);
+        Socket socket = servSocket.accept();
+        System.out.println("norm");
+        System.out.println(socket.getInetAddress());
+        Connection con=new Connection(socket);
+        //remoteAddress=socket.getRemoteSocketAddress();
+        con.SendNickHello("Alex Butrim huilo");
+        con.sendMessage("Alexey Butrim huilo po zhizni");
+        System.out.println(con.receive().toString());*/
+        CallListener cl=new CallListener("Comp");
+        Connection connection=cl.getConnection();
+        connection.accept();
+        connection.sendMessage("We have connection.");
+        System.out.println(connection.receive().toString());
     }
 
 }
