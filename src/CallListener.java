@@ -88,8 +88,7 @@ public class CallListener {
         System.out.println(socket.getInetAddress());
         Connection con=new Connection(socket);
         //remoteAddress=socket.getRemoteSocketAddress();
-        con.SendNickHello("Alex Butrim huilo");
-        //con.sendMessage("Alexey Butrim huilo po zhizni");
+
         System.out.println(con.receive().toString());
         System.out.println(con.receive().toString());
         System.out.println(con.receive().toString());

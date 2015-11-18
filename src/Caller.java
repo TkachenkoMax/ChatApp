@@ -4,8 +4,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.SocketAddress;
-import java.util.StringJoiner;
+
 
 
 public class Caller {
@@ -50,8 +49,8 @@ public class Caller {
     public Connection call() throws IOException {
         Socket socket = null;
         try {
-            socket = new Socket(getRemoteAdress(), PORT);
-            socket.connect(socket.getRemoteSocketAddress());
+            socket = new Socket(getRemoteAdress(), PORT+1);
+            //socket.connect(socket.getRemoteSocketAddress());
             Connection connection = new Connection(socket);
             Command command = connection.receive();
             if (command.getCommandType() == Command.CommandType.valueOf("NICK")) {
@@ -133,7 +132,6 @@ public class Caller {
     public static void main(String[] args) throws IOException {
         Caller c = new Caller("Kostya", "109.87.26.248");
         Connection connection = c.call();
-
         System.out.println(connection.receive().toString());
         System.out.println(connection.receive().toString());
         connection.sendMessage("Congratulation!");
