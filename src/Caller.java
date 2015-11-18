@@ -49,7 +49,7 @@ public class Caller {
     public Connection call() throws IOException {
         Socket socket = null;
         try {
-            socket = new Socket(getRemoteAdress(), PORT+1);
+            socket = new Socket(getRemoteAdress(), PORT);
             //socket.connect(socket.getRemoteSocketAddress());
             Connection connection = new Connection(socket);
             Command command = connection.receive();
