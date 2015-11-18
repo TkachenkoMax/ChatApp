@@ -16,27 +16,35 @@ public class Connection {
     public void SendNickHello(String nick) throws IOException {
         OutputStream sout = socket.getOutputStream();
         DataOutputStream out = new DataOutputStream(sout);
-        out.write(("ChatApp 2015 user " + nick + '\n').getBytes());
+        out.write(("ChatApp 2015 user " + nick).getBytes());
+        out.write(0x0a);
+        out.flush();
     }
 
     public void SendNickBusy(String nick) throws IOException {
         OutputStream sout = socket.getOutputStream();
         DataOutputStream out = new DataOutputStream(sout);
-        out.write(("ChatApp 2015 user " + nick + " busy" + '\n').getBytes());
+        out.write(("ChatApp 2015 user " + nick + " busy").getBytes());
+        out.write(0x0a);
+        out.flush();
     }
 
     public void sendMessage(String message) throws IOException {
         OutputStream sout = socket.getOutputStream();
         DataOutputStream out = new DataOutputStream(sout);
-        out.write(("Message" + '\n').getBytes());
-        out.write((message + '\n').getBytes());
+        out.write(("Message").getBytes());
+        out.write(0x0a);
+        out.write((message).getBytes());
+        out.write(0x0a);
         out.flush();
     }
 
     public void disconnect() throws IOException {
         OutputStream sout = socket.getOutputStream();
         DataOutputStream out = new DataOutputStream(sout);
-        out.write(("Disconnect" + '\n').getBytes());
+        out.write(("Disconnect").getBytes());
+        out.write(0x0a);
+        out.flush();
         socket.close();
     }
 
@@ -44,7 +52,9 @@ public class Connection {
         if (socket.isConnected()) {
             OutputStream sout = socket.getOutputStream();
             DataOutputStream out = new DataOutputStream(sout);
-            out.write(("Accepted" + '\n').getBytes());
+            out.write(("Accepted").getBytes());
+            out.write(0x0a);
+            out.flush();
         }
     }
 
@@ -52,7 +62,9 @@ public class Connection {
         if (!socket.isConnected()) {
             OutputStream sout = socket.getOutputStream();
             DataOutputStream out = new DataOutputStream(sout);
-            out.write(("Rejected" + '\n').getBytes());
+            out.write(("Rejected").getBytes());
+            out.write(0x0a);
+            out.flush();
         }
     }
 

@@ -15,10 +15,11 @@ public class Command {
             else return false;
         }
     }
+    public CommandType getCommandType(){
+        return commandType;
+    }
     @Override
     public String toString() {
-        return "Command{" +
-                "commandType=" + commandType +
-                '}';
+        return  commandType.toString();
     }
 }

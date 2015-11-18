@@ -1,18 +1,21 @@
 import sun.print.resources.serviceui_zh_CN;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.util.StringJoiner;
 
+
 public class Caller {
 
     private String localNick;
-    private SocketAddress remoteAddress;
+    private InetSocketAddress remoteAddress;
     private String remoteNick;
     private boolean isBusy;
-    private String ip;
-    private static final int PORT = 28411;
+    static final int PORT = 28411;
+    private CallStatus callStatus;
 
     public static enum CallStatus {
         BUSY, NO_SERVICE, NOT_ACCESSIBLE, OK, REJECTED
@@ -27,63 +30,95 @@ public class Caller {
     }
 
     public Caller() {
-        remoteNick = "Username";
-        ip = "8.8.4.4";
+        remoteNick = "unnamed";
     }
 
     public Caller(String localNick) {
         this.localNick = localNick;
-        ip = "8.8.4.4";
     }
 
-    public Caller(String localNick, SocketAddress remoteAddress) {
+    public Caller(String localNick, InetSocketAddress remoteAddress) {
         this.localNick = localNick;
-        this.ip = "8.8.4.4";
         this.remoteAddress = remoteAddress;
     }
 
     public Caller(String localNick, String ip) {
         this.localNick = localNick;
-        this.ip = ip;
+        this.remoteAddress = new InetSocketAddress(ip, PORT);
     }
 
     public Connection call() throws IOException {
+        Socket socket = null;
         try {
-            Socket socket = new Socket(ip, PORT);
+            socket = new Socket(getRemoteAdress(), PORT);
             socket.connect(socket.getRemoteSocketAddress());
             Connection connection = new Connection(socket);
-            NickCommand command = (NickCommand) connection.receive();
-            remoteNick = command.getNick();
-            isBusy = command.isBusy();
+            Command command = connection.receive();
+            if (command.getCommandType() == Command.CommandType.valueOf("NICK")) {
+                remoteNick = ((NickCommand) command).getNick();
+                isBusy = ((NickCommand) command).isBusy();
+            } else {
+                callStatus = CallStatus.valueOf("NO_SERVICE");
+                return null;
+            }
             if (isBusy) {
+                callStatus = CallStatus.valueOf("BUSY");
                 connection.close();
-            } else
+                return null;
+            } else {
                 connection.SendNickHello(localNick);
-            return connection;
+                command = connection.receive();
+                if (command.getCommandType() == Command.CommandType.valueOf("ACCEPT")) {
+                    callStatus = CallStatus.valueOf("OK");
+                    return connection;
+                } else {
+                    if (command.getCommandType() == Command.CommandType.valueOf("REJECT")) {
+                        callStatus = CallStatus.valueOf("REJECTED");
+                        return null;
+                    }
+                }
+            }
         } catch (IOException e) {
-            e.printStackTrace();
+            callStatus = CallStatus.valueOf("NOT_ACCESSIBLE");
             return null;
         }
+        return null;
     }
 
     public String getLocalNick() {
         return localNick;
     }
 
-    public SocketAddress getRemoteAdress() {
-        return remoteAddress;
+    public InetAddress getRemoteAdress() {
+        return remoteAddress.getAddress();
     }
 
     public String getRemoteNick() {
         return remoteNick;
     }
 
-    public void setRemoteAdress(SocketAddress remoteAddress) {
-        this.remoteAddress = remoteAddress;
+    public void setRemoteAdress(String ip) {
+        this.remoteAddress = new InetSocketAddress(ip, PORT);
+    }
+
+    public void setRemoteNick(String remoteNick) {
+        this.remoteNick = remoteNick;
     }
 
     public void setLocalNick(String localNick) {
         this.localNick = localNick;
+    }
+
+    public void setRemoteAddress(InetSocketAddress remoteAddress) {
+        this.remoteAddress = remoteAddress;
+    }
+
+    public void setBusy(boolean isBusy) {
+        this.isBusy = isBusy;
+    }
+
+    public void setCallStatus(CallStatus callStatus) {
+        this.callStatus = callStatus;
     }
 
     public CallStatus getStatus() {
@@ -92,7 +127,7 @@ public class Caller {
 
     @Override
     public String toString() {
-        return "Local nick: " + localNick + ", IP: " + ip + ", remote nick: " + remoteNick + ", remote address: " + remoteAddress;
+        return "Local nick: " + localNick + ", remote nick: " + remoteNick + ", remote address: " + remoteAddress;
     }
 
     public static void main(String[] args) throws IOException {

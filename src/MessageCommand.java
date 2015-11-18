@@ -4,11 +4,11 @@ public class MessageCommand extends Command {
         super(Command.CommandType.valueOf("MESSAGE"));
         this.message = message;
     }
-
+    public CommandType getCommandType(){
+        return Command.CommandType.valueOf("MESSAGE");
+    }
     @Override
     public String toString() {
-        return "MessageCommand{" +
-                "message='" + message + '\'' +
-                '}';
+        return  message;
     }
 }

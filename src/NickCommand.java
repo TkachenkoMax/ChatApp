@@ -24,4 +24,8 @@ public class NickCommand extends Command{
     public String getNick() {
         return nick;
     }
+
+    public CommandType getCommandType(){
+        return Command.CommandType.valueOf("NICK");
+    }
 }
