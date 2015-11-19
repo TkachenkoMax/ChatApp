@@ -3,12 +3,11 @@ import java.io.IOException;
 
 public class CallListener {
     private static final int PORT = 28411;
-    private final String IP = "127.0.0.1";
     private String localNick;
     private InetSocketAddress listenAddress, remoteAddress;
     private String remoteNick;
     private ServerSocket serverSocket;
-    private boolean isBusy;
+    private volatile boolean isBusy;
 
     public CallListener() {
         this.localNick = "unnamed";
@@ -33,15 +32,16 @@ public class CallListener {
         if (command.getCommandType() == Command.CommandType.valueOf("NICK")) {
             remoteNick = ((NickCommand) command).getNick();
             remoteAddress = (InetSocketAddress) socket.getRemoteSocketAddress();
+            return connection;
         } else return null;
-        if (isBusy()) {
+        /*if (isBusy()) {
             connection.SendNickBusy(localNick);
             connection.close();
             return null;
         } else {
             setBusy(true);
             return connection;
-        }
+        }*/
     }
 
     public String getLocalNick() {
@@ -76,13 +76,15 @@ public class CallListener {
     public void setListenAddress(String lockalIp, int port) {
         this.listenAddress = new InetSocketAddress(lockalIp, PORT);
     }
-
+    public InetSocketAddress getRemoteAddress() {
+        return remoteAddress;
+    }
     public String toString() {
         return localNick + " " + listenAddress;
     }
 
     public static void main(String[] args) throws IOException {
-        ServerSocket servSocket = new ServerSocket(28411);
+        /*ServerSocket servSocket = new ServerSocket(28411);
         Socket socket = servSocket.accept();
         System.out.println("norm");
         System.out.println(socket.getInetAddress());
@@ -92,12 +94,26 @@ public class CallListener {
         System.out.println(con.receive().toString());
         System.out.println(con.receive().toString());
         System.out.println(con.receive().toString());
-        System.out.println(con.receive().toString());
+        System.out.println(con.receive().toString());*/
         /*CallListener cl = new CallListener("Comp");
         Connection connection = cl.getConnection();
-        connection.accept();
+        //connection.accept();
         connection.sendMessage("We have connection.");
         System.out.println(connection.receive().toString());*/
+
+        Socket s=new Socket("files.litvinov.in.ua",28411);
+        Connection c=new Connection(s);
+        Command command=c.receive();
+        System.out.println(command.toString());
+        c.SendNickHello("Kostya");
+        command=c.receive();
+        System.out.println(command.toString());
+        c.sendMessage("Hello");
+        command=c.receive();
+        System.out.println(command.toString());
+
+
     }
+
 
 }

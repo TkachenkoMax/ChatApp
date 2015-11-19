@@ -3,9 +3,13 @@ import javax.swing.border.LineBorder;
 import javax.xml.soap.Text;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.io.IOException;
+import java.util.Observable;
+import java.util.Observer;
 
-public class MainForm {
+public class MainForm implements Observer{
     private JFrame mainFrame;
     private JPanel mainPanel;
     private JLabel loginLabel;
@@ -22,8 +26,12 @@ public class MainForm {
     private JButton sendButton;
     public JScrollPane messagesScrollPane;
     public JScrollPane yourMessageScrollPane;
+    private Connection connection;
+    private CallListenerThread callListenerThread;
+    private Caller caller;
+    public static MainForm window;
 
-    public MainForm() {
+    public MainForm()  {  // TODO
         mainFrame = new JFrame();
         mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         mainFrame.setVisible(true);
@@ -136,20 +144,139 @@ public class MainForm {
                 disconnectButton.setEnabled(false);
                 sendButton.setEnabled(false);
                 yourMessageField.setEditable(false);
+                try {
+                    connection.disconnect();
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
             }
         });
+        sendButton.addActionListener(new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (yourMessageField.getText().equals("")||remoteAddressTextField.getText().equals("")||remoteLoginTextField.getText().equals("")){
+                    sendButton.setSelected(false);
+                }
+                else {
+                    try {
+                        connection.sendMessage(yourMessageField.getText());
+                        messagesArea.setText(yourMessageField.getText());
+                    } catch (IOException e1) {
+                        e1.printStackTrace();
+                    }
+                }
+                yourMessageField.setText("");
+            }
+        });
+        yourMessageField.addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+                if (e.getKeyCode()==KeyEvent.VK_ENTER){
+                    sendButton.doClick();
+                }
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+
+            }
+        });
+        applyButton.addActionListener(new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (callListenerThread==null){
+                    callListenerThread=new CallListenerThread(new CallListener(loginTextField.getText()));
+                }
+                else {
+                    callListenerThread.getCallListener().setLocalNick(loginTextField.getText());
+                }
+                applyButton.setSelected(false);
+            }
+
+        });
+
+        connectButton.addActionListener(new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (/*remoteLoginTextField.getText().equals("") && */remoteAddressTextField.getText().equals("")){
+                    JOptionPane.showMessageDialog(mainFrame,"Insufficient data. Please, enter a remote login and a remote adress!");
+                }
+                else {
+                    caller=new Caller(loginTextField.getText(),remoteAddressTextField.getText());
+                    Thread t=new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            connectButton.setSelected(false);
+                            disconnectButton.setSelected(true);
+                            try {
+                                connection = caller.call();
+                                if (caller.getStatus()== Caller.CallStatus.valueOf("OK")){
+                                    remoteLoginTextField.setText(caller.getRemoteNick());
+                                }
+                                else {
+                                    if (caller.getStatus()== Caller.CallStatus.valueOf("BUSY")){
+                                        JOptionPane.showMessageDialog(mainFrame,"User "+caller.getRemoteNick()+" is busy now.");
+                                        connection=null;
+                                    }
+                                    else {
+                                        if (caller.getStatus()== Caller.CallStatus.valueOf("REJECT")){
+                                            JOptionPane.showMessageDialog(mainFrame,"User "+caller.getRemoteNick()+" has rejected your call.");
+                                            connection=null;
+                                        }
+                                    }
+                                }
+                            } catch (IOException e1) {
+                                JOptionPane.showMessageDialog(mainFrame,"Eror 404! Couldn't connect!");
+                                connection=null;
+                            }
+                        }
+                    });
+                    t.start();
+                }
+            }
+        });
+
     }
 
     public static void main(String[] args) throws IOException {
         EventQueue.invokeLater(new Runnable() {
             public void run() {
                 try {
-                    MainForm window = new MainForm();
+                    window = new MainForm();
                     window.mainFrame.setVisible(true);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
         });
+    }
+
+    @Override
+    public void update(Observable o, Object arg) {
+        if (arg == CallListener.class){
+            CallListener callListener= (CallListener) arg;
+            callListenerThread.suspend();
+            callListenerThread.resume();
+            System.out.println("1");
+        }
+        else {
+            if (arg == Connection.class){
+                connection = (Connection) arg;
+                System.out.println("2");
+            }
+            else {
+                Command command=(Command) arg;
+                if (command.getCommandType()== Command.CommandType.valueOf("MESSAGE")){
+                    System.out.println("3");
+                    messagesArea.setText("Back: "+command.toString());
+                    //messagesArea.insert("Back: "+command.toString(),messagesArea.getLineCount()+1);
+                }
+            }
+        }
     }
 }

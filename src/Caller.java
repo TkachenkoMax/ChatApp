@@ -1,4 +1,3 @@
-import sun.print.resources.serviceui_zh_CN;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -47,9 +46,9 @@ public class Caller {
     }
 
     public Connection call() throws IOException {
-        Socket socket = null;
+        //Socket socket = null;
         try {
-            socket = new Socket(getRemoteAdress(), PORT);
+            Socket socket = new Socket(getRemoteAdress(), PORT);
             //socket.connect(socket.getRemoteSocketAddress());
             Connection connection = new Connection(socket);
             Command command = connection.receive();
@@ -121,7 +120,7 @@ public class Caller {
     }
 
     public CallStatus getStatus() {
-        return null;
+        return callStatus;
     }
 
     @Override
@@ -130,10 +129,12 @@ public class Caller {
     }
 
     public static void main(String[] args) throws IOException {
-        Caller c = new Caller("Kostya", "109.87.26.248");
+        Caller c = new Caller("Kostya", "files.litvinov.in.ua");
         Connection connection = c.call();
-        System.out.println(connection.receive().toString());
-        System.out.println(connection.receive().toString());
         connection.sendMessage("Congratulation!");
+        System.out.println(connection.receive().toString());
+        connection.sendMessage("Мама я в консоли!");
+        System.out.println(connection.receive().toString());
+
     }
 }

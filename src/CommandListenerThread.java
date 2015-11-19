@@ -1,5 +1,6 @@
 import java.io.IOException;
 import java.util.Observable;
+import java.util.Observer;
 
 public class CommandListenerThread extends Observable implements Runnable {
     private Connection connection;
@@ -18,6 +19,10 @@ public class CommandListenerThread extends Observable implements Runnable {
         thread.start();
     }
 
+    public Connection getConnection() {
+        return connection;
+    }
+
     public Command getLastCommand() {
         return lastCommand;
     }
@@ -27,7 +32,7 @@ public class CommandListenerThread extends Observable implements Runnable {
     }
 
     @Override
-    public void run() {
+    public void run() {   //TODO all
         while (!isDisconnected) {
             try {
                 lastCommand = connection.receive();
@@ -46,6 +51,7 @@ public class CommandListenerThread extends Observable implements Runnable {
                         break;
                     }
                     case MESSAGE:
+                        observable.notifyObservers(lastCommand);
                         this.isDisconnected = false;
                         break;
                     case NICK:
@@ -57,14 +63,23 @@ public class CommandListenerThread extends Observable implements Runnable {
                         break;
                     }
                 }
-                this.setChanged();
-                this.notifyObservers();
-                this.clearChanged();
+                //this.setChanged();
+                //this.notifyObservers();
+                //this.clearChanged();
+
             } catch (IOException e) {
                 System.out.println(e);
             }
+            observable.notifyObservers(lastCommand);
         }
     }
+
+    private Observable observable = new Observable(){
+        public void notifyObservers(Object arg) {
+            setChanged();
+            super.notifyObservers(arg);
+        }
+    };
 
     public void start() {
         isDisconnected = false;
@@ -72,7 +87,16 @@ public class CommandListenerThread extends Observable implements Runnable {
         thread.start();
     }
 
+    public void addObserver(Observer observer){
+        observable.addObserver(observer);
+    }
+
     public void stop() {
-        isDisconnected = true;
+        this.isDisconnected = true;
+    }
+    public static void main (String [] args){
+        CallListener c=new CallListener();
+        CallListenerThread clt=new CallListenerThread(c);
+        CommandListenerThread comlt=new CommandListenerThread(clt.getConnection());
     }
 }
