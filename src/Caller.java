@@ -48,7 +48,13 @@ public class Caller {
     public Connection call() throws IOException {
         //Socket socket = null;
         try {
-            Socket socket = new Socket(getRemoteAdress(), PORT);
+            Socket socket=null;
+            try {
+            socket = new Socket(getRemoteAdress(), PORT);
+            }
+            catch (NullPointerException e){
+                callStatus = CallStatus.valueOf("NOT_ACCESSIBLE");
+            }
             //socket.connect(socket.getRemoteSocketAddress());
             Connection connection = new Connection(socket);
             Command command = connection.receive();

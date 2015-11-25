@@ -28,8 +28,10 @@ public class MainForm implements Observer{
     public JScrollPane yourMessageScrollPane;
     private Connection connection;
     private CallListenerThread callListenerThread;
+    private CommandListenerThread commandListenerThread;
     private Caller caller;
     public static MainForm window;
+    private String localNick = "unnamed";
 
     public MainForm()  {  // TODO
         mainFrame = new JFrame();
@@ -79,7 +81,7 @@ public class MainForm implements Observer{
         remoteAddressLabel.setHorizontalAlignment(SwingConstants.RIGHT);
 
         remoteAddressTextField = new JTextField();
-
+        remoteAddressTextField.setText("files.litvinov.in.ua");
         disconnectButton = new JButton("Disconnect");
         disconnectButton.setBackground(new Color(0xDD5140));
         disconnectButton.setForeground(Color.WHITE);
@@ -127,6 +129,7 @@ public class MainForm implements Observer{
 
         mainFrame.add(mainPanel);
 
+
         connectButton.addActionListener(new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -160,7 +163,9 @@ public class MainForm implements Observer{
                 else {
                     try {
                         connection.sendMessage(yourMessageField.getText());
-                        messagesArea.setText(yourMessageField.getText());
+                        messagesArea.append(yourMessageField.getText() + '\n');
+                        //Command c=connection.receive();
+                        //messagesArea.append(c.toString());
                     } catch (IOException e1) {
                         e1.printStackTrace();
                     }
@@ -189,13 +194,17 @@ public class MainForm implements Observer{
         applyButton.addActionListener(new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if (callListenerThread==null){
+                /*if (callListenerThread==null){
                     callListenerThread=new CallListenerThread(new CallListener(loginTextField.getText()));
                 }
                 else {
                     callListenerThread.getCallListener().setLocalNick(loginTextField.getText());
                 }
-                applyButton.setSelected(false);
+                applyButton.setSelected(false);*/
+                if (!loginTextField.getText().equals("")){
+                    localNick = loginTextField.getText();
+                    callListenerThread.setLocalNick(localNick);
+                }
             }
 
         });
@@ -203,12 +212,27 @@ public class MainForm implements Observer{
         connectButton.addActionListener(new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if (/*remoteLoginTextField.getText().equals("") && */remoteAddressTextField.getText().equals("")){
+                if (remoteAddressTextField.getText().equals("")){
                     JOptionPane.showMessageDialog(mainFrame,"Insufficient data. Please, enter a remote login and a remote adress!");
                 }
                 else {
                     caller=new Caller(loginTextField.getText(),remoteAddressTextField.getText());
-                    Thread t=new Thread(new Runnable() {
+                    try {
+                        connection = caller.call();
+                    } catch (IOException e1) {
+                        e1.printStackTrace();
+                    }
+                    if (connection == null){
+
+                    }
+                    else {
+                        commandListenerThread = new CommandListenerThread(connection);
+                        addCommandObserver();
+                        remoteLoginTextField.setText(caller.getRemoteNick());
+                        commandListenerThread.start();
+                        addCommandObserver();
+                    }
+                    /*Thread t=new Thread(new Runnable() {
                         @Override
                         public void run() {
                             connectButton.setSelected(false);
@@ -228,21 +252,48 @@ public class MainForm implements Observer{
                                             JOptionPane.showMessageDialog(mainFrame,"User "+caller.getRemoteNick()+" has rejected your call.");
                                             connection=null;
                                         }
+                                        else {
+                                            if (caller.getStatus()== Caller.CallStatus.valueOf("NOT_ACCESSIBLE")){
+                                                JOptionPane.showMessageDialog(mainFrame,"No internet connection!");
+                                                connection=null;
+                                            }
+                                        }
                                     }
                                 }
                             } catch (IOException e1) {
-                                JOptionPane.showMessageDialog(mainFrame,"Eror 404! Couldn't connect!");
+                                JOptionPane.showMessageDialog(mainFrame,"Error 404! Couldn't connect!");
                                 connection=null;
+                            }
+                            catch (NullPointerException e){
+                                JOptionPane.showMessageDialog(mainFrame,"No internet connection!");
+
                             }
                         }
                     });
-                    t.start();
+                    t.start();*/
                 }
+
             }
         });
-
+        CallListener callListener = new CallListener(localNick);
+        this.callListenerThread = new CallListenerThread(callListener);
+        this.callListenerThread.addObserver(new Observer() {
+            @Override
+            public void update(Observable o, Object arg) {
+                SwingUtilities.invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        connection = callListenerThread.getLastConnection();
+                        callListenerThread.setBusy(true);
+                        commandListenerThread = new CommandListenerThread(connection);
+                        addCommandObserver();
+                        commandListenerThread.start();
+                    }
+                });
+            }
+        });
+        this.callListenerThread.start();
     }
-
     public static void main(String[] args) throws IOException {
         EventQueue.invokeLater(new Runnable() {
             public void run() {
@@ -255,28 +306,101 @@ public class MainForm implements Observer{
             }
         });
     }
+    public void addCommandObserver(){
+        this.commandListenerThread.addObserver(new Observer() {
+            @Override
+            public void update(Observable o, Object arg) {
+                if (commandListenerThread.getLastCommand() != null){
+                    if (commandListenerThread.getLastCommand() instanceof NickCommand){
+                        remoteLoginTextField.setText(((NickCommand) commandListenerThread.getLastCommand()).getNick());
+                        try {
+                            callListenerThread.getLastConnection().accept();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        commandListenerThread.stop();
+                    }
+                    else if (commandListenerThread.getLastCommand() instanceof MessageCommand){
+                        SwingUtilities.invokeLater(new Runnable() {
+                            @Override
+                            public void run() {
+                                messagesArea.append("Back: "+((MessageCommand) commandListenerThread.getLastCommand()).toString() + "\n");
+                            }
+                        });
+                    }
+                    else if (commandListenerThread.getLastCommand().getCommandType()!=null){
+                        switch (commandListenerThread.getLastCommand().getCommandType()){
+                            case ACCEPT:{
+                                callListenerThread.setBusy(true);
+                                break;
+                            }
+                            case REJECT:{
+                                callListenerThread.setBusy(false);
+                                SwingUtilities.invokeLater(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        JOptionPane.showMessageDialog(mainFrame, "User " + caller.getRemoteNick() + " has rejected your call.");
+                                        connection=null;
+                                    }
+                                });
+                                break;
+                            }
+                            case DISCONNECT:{
+                                SwingUtilities.invokeLater(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        JOptionPane.showMessageDialog(mainFrame, "User " + caller.getRemoteNick() + " has disconnected.");
+                                        connection=null;
+                                    }
+                                });
+                                callListenerThread.setBusy(false);
+                                commandListenerThread = null;
+                                connection = null;
+                                break;
+                            }
+                        }
+                    }
+                }
+                else {
+                    commandListenerThread.stop();
+                    connection = null;
+                    commandListenerThread = null;
+                    callListenerThread.setBusy(false);
+                }
+            }
+        });
+    }
 
     @Override
     public void update(Observable o, Object arg) {
+
+    }
+    /*@Override
+    public void update(Observable o, Object arg) {
         if (arg == CallListener.class){
+            messagesArea.append("good");
             CallListener callListener= (CallListener) arg;
-            callListenerThread.suspend();
             callListenerThread.resume();
             System.out.println("1");
+
         }
         else {
+            messagesArea.append("asd");
             if (arg == Connection.class){
                 connection = (Connection) arg;
                 System.out.println("2");
             }
             else {
+                messagesArea.append("123");
                 Command command=(Command) arg;
                 if (command.getCommandType()== Command.CommandType.valueOf("MESSAGE")){
                     System.out.println("3");
-                    messagesArea.setText("Back: "+command.toString());
+                    messagesArea.append("Back: "+command.toString()+'\n');
+                    //messagesArea.setText("Back: "+command.toString());
                     //messagesArea.insert("Back: "+command.toString(),messagesArea.getLineCount()+1);
+
                 }
             }
         }
-    }
+    }*/
 }

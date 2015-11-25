@@ -16,7 +16,7 @@ public class Connection {
     public void SendNickHello(String nick) throws IOException {
         OutputStream sout = socket.getOutputStream();
         DataOutputStream out = new DataOutputStream(sout);
-        out.write(("ChatApp 2015 user " + nick).getBytes());
+        out.write(("ChatApp 2015 user " + nick).getBytes("UTF-8"));
         out.write(0x0a);
         out.flush();
     }
@@ -24,7 +24,7 @@ public class Connection {
     public void SendNickBusy(String nick) throws IOException {
         OutputStream sout = socket.getOutputStream();
         DataOutputStream out = new DataOutputStream(sout);
-        out.write(("ChatApp 2015 user " + nick + " busy").getBytes());
+        out.write(("ChatApp 2015 user " + nick + " busy").getBytes("UTF-8"));
         out.write(0x0a);
         out.flush();
     }
@@ -32,9 +32,9 @@ public class Connection {
     public void sendMessage(String message) throws IOException {
         OutputStream sout = socket.getOutputStream();
         DataOutputStream out = new DataOutputStream(sout);
-        out.write(("Message").getBytes());
+        out.write(("Message").getBytes("UTF-8"));
         out.write(0x0a);
-        out.write((message).getBytes());
+        out.write((message).getBytes("UTF-8"));
         out.write(0x0a);
         out.flush();
     }
@@ -42,7 +42,7 @@ public class Connection {
     public void disconnect() throws IOException {
         OutputStream sout = socket.getOutputStream();
         DataOutputStream out = new DataOutputStream(sout);
-        out.write(("Disconnect").getBytes());
+        out.write(("Disconnect").getBytes("UTF-8"));
         out.write(0x0a);
         out.flush();
         socket.close();
@@ -52,7 +52,7 @@ public class Connection {
         if (socket.isConnected()) {
             OutputStream sout = socket.getOutputStream();
             DataOutputStream out = new DataOutputStream(sout);
-            out.write(("Accepted").getBytes());
+            out.write(("Accepted").getBytes("UTF-8"));
             out.write(0x0a);
             out.flush();
         }
@@ -62,7 +62,7 @@ public class Connection {
         if (!socket.isConnected()) {
             OutputStream sout = socket.getOutputStream();
             DataOutputStream out = new DataOutputStream(sout);
-            out.write(("Rejected").getBytes());
+            out.write(("Rejected").getBytes("UTF-8"));
             out.write(0x0a);
             out.flush();
         }
@@ -120,7 +120,17 @@ public class Connection {
             }
         }
     }
-
+    public boolean isOpen(){
+        if (!socket.isConnected()){
+            return false;
+        }
+        else{
+            if (socket.isClosed()){
+                return false;
+            }
+        }
+        return true;
+    }
     public static void main(String[] args) throws IOException {
 
     }

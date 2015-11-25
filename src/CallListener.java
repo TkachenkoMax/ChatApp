@@ -76,6 +76,9 @@ public class CallListener {
     public void setListenAddress(String lockalIp, int port) {
         this.listenAddress = new InetSocketAddress(lockalIp, PORT);
     }
+    public void setListenAddress(SocketAddress listenAddress){
+        this.listenAddress = (InetSocketAddress) listenAddress;
+    }
     public InetSocketAddress getRemoteAddress() {
         return remoteAddress;
     }
