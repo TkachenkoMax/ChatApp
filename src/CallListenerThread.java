@@ -31,7 +31,7 @@ public class CallListenerThread extends Observable implements Runnable {
 
     public void stop() {
         this.isStop = true;
-        ;
+
     }
 
     public boolean isBusy() {
@@ -39,7 +39,7 @@ public class CallListenerThread extends Observable implements Runnable {
     }
 
     public void setBusy(boolean isBusy) {
-        callListener.setBusy(isBusy);
+        this.callListener.setBusy(isBusy);
     }
 
     public CallListener getCallListener() {
@@ -51,7 +51,7 @@ public class CallListenerThread extends Observable implements Runnable {
     }
 
     public void setLocalNick(String localNick) {
-        callListener.setLocalNick(localNick);
+        this.callListener.setLocalNick(localNick);
     }
 
     public void setListenAddress(InetSocketAddress listenAddress) {
@@ -62,7 +62,7 @@ public class CallListenerThread extends Observable implements Runnable {
         return this.callListener.getListenAddress();
     }
 
-    public String getRemotelNick() throws IOException {
+    public String getRemoteNick() throws IOException {
         return this.callListener.getRemoteNick();
     }
 
@@ -79,23 +79,20 @@ public class CallListenerThread extends Observable implements Runnable {
         while (!isStop) {
             try {
                 connection = callListener.getConnection();
-                if (callListener.isBusy()) {
+                /*if (callListener.isBusy()) {
                     callStatus = Caller.CallStatus.valueOf("BUSY");
                 } else {
                     callStatus = Caller.CallStatus.valueOf("REJECT");
-                }
-                if (callListener.isBusy()) {
-                    connection.disconnect();
-                } else {
-                    setBusy(true);
-                }
+                }*/
                 callStatus = Caller.CallStatus.valueOf("OK");
-                //connection.accept();
             } catch (IOException e) {
                 callStatus = Caller.CallStatus.valueOf("REJECTED");
             }
             setChanged();
-            notifyObservers(connection);
+            notifyObservers((Object)connection);
         }
+    }
+    public static void main(String[] args) throws IOException{
+
     }
 }

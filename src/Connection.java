@@ -8,14 +8,16 @@ import java.nio.ByteBuffer;
 public class Connection {
     private Socket socket;
     private static final String VERSION = "ChatApp 2015";
-
+    private DataInputStream in;
+    private DataOutputStream out;
+    private InputStream sin;
     public Connection(Socket socket) {
         this.socket = socket;
     }
 
     public void SendNickHello(String nick) throws IOException {
         OutputStream sout = socket.getOutputStream();
-        DataOutputStream out = new DataOutputStream(sout);
+        out = new DataOutputStream(sout);
         out.write(("ChatApp 2015 user " + nick).getBytes("UTF-8"));
         out.write(0x0a);
         out.flush();
@@ -23,7 +25,7 @@ public class Connection {
 
     public void SendNickBusy(String nick) throws IOException {
         OutputStream sout = socket.getOutputStream();
-        DataOutputStream out = new DataOutputStream(sout);
+        out = new DataOutputStream(sout);
         out.write(("ChatApp 2015 user " + nick + " busy").getBytes("UTF-8"));
         out.write(0x0a);
         out.flush();
@@ -31,7 +33,7 @@ public class Connection {
 
     public void sendMessage(String message) throws IOException {
         OutputStream sout = socket.getOutputStream();
-        DataOutputStream out = new DataOutputStream(sout);
+        out = new DataOutputStream(sout);
         out.write(("Message").getBytes("UTF-8"));
         out.write(0x0a);
         out.write((message).getBytes("UTF-8"));
@@ -41,7 +43,7 @@ public class Connection {
 
     public void disconnect() throws IOException {
         OutputStream sout = socket.getOutputStream();
-        DataOutputStream out = new DataOutputStream(sout);
+        out = new DataOutputStream(sout);
         out.write(("Disconnect").getBytes("UTF-8"));
         out.write(0x0a);
         out.flush();
@@ -51,7 +53,7 @@ public class Connection {
     public void accept() throws IOException {
         if (socket.isConnected()) {
             OutputStream sout = socket.getOutputStream();
-            DataOutputStream out = new DataOutputStream(sout);
+            out = new DataOutputStream(sout);
             out.write(("Accepted").getBytes("UTF-8"));
             out.write(0x0a);
             out.flush();
@@ -61,7 +63,7 @@ public class Connection {
     public void reject() throws IOException {
         if (!socket.isConnected()) {
             OutputStream sout = socket.getOutputStream();
-            DataOutputStream out = new DataOutputStream(sout);
+            out = new DataOutputStream(sout);
             out.write(("Rejected").getBytes("UTF-8"));
             out.write(0x0a);
             out.flush();
@@ -76,14 +78,20 @@ public class Connection {
         String text = "";
         int b;
         StringBuffer stringBuffer = new StringBuffer();
-        InputStream sin = socket.getInputStream();
-        DataInputStream in = new DataInputStream(sin);
+        sin = socket.getInputStream();
+        in = new DataInputStream(sin);
         while (true) {
             if ((b = in.read()) == 0x0a) {
                 text = stringBuffer.toString().toUpperCase();
                 if (text.equals("MESSAGE")) {
                     stringBuffer = new StringBuffer();
+                    long beginT = System.currentTimeMillis();
+                    long endT;
                     while (true) {
+                        endT = System.currentTimeMillis();
+                        if ((endT-beginT)>=2000){
+                            return new MessageCommand(stringBuffer.toString()+"   ...(broken)");
+                        }
                         if ((b = in.read()) == 0x0a) {
                             break;
                         } else

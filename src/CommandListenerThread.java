@@ -15,7 +15,6 @@ public class CommandListenerThread extends Observable implements Runnable {
 
     public CommandListenerThread(Connection connection) {
         this.connection = connection;
-        thread = new Thread(this);
         this.start();
     }
 
@@ -37,7 +36,7 @@ public class CommandListenerThread extends Observable implements Runnable {
             try {
                 lastCommand = connection.receive();
             } catch (IOException e) {
-                e.printStackTrace();
+                this.isDisconnected = false;
             }
             isDisconnected = !connection.isOpen();
             this.setChanged();
@@ -53,10 +52,10 @@ public class CommandListenerThread extends Observable implements Runnable {
 
     public void stop() {
         this.isStop = true;
+        this.isDisconnected = true;
+        this.isStart = false;
     }
     public static void main (String [] args){
-        CallListener c=new CallListener();
-        CallListenerThread clt=new CallListenerThread(c);
-        CommandListenerThread comlt=new CommandListenerThread(clt.getLastConnection());
+
     }
 }

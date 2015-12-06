@@ -6,10 +6,14 @@ import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.net.Socket;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Observable;
 import java.util.Observer;
 
-public class MainForm implements Observer{
+public class MainForm extends JFrame {
     private JFrame mainFrame;
     private JPanel mainPanel;
     private JLabel loginLabel;
@@ -65,6 +69,7 @@ public class MainForm implements Observer{
         remoteLoginLabel.setHorizontalAlignment(SwingConstants.RIGHT);
 
         remoteLoginTextField = new JTextField();
+        remoteLoginTextField.setEditable(false);
 
         connectButton = new JButton("Connect");
         connectButton.setBackground(new Color(0x33AD54));
@@ -128,29 +133,26 @@ public class MainForm implements Observer{
         mainPanel.add(sendButton, new GridBagConstraints(5, 3, 1, 1, 1, 0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(2, 2, 2, 2), 0, 0));
 
         mainFrame.add(mainPanel);
-
-
-        connectButton.addActionListener(new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                connectButton.setEnabled(false);
-                disconnectButton.setEnabled(true);
-                sendButton.setEnabled(true);
-                yourMessageField.setEditable(true);
-            }
-        });
+        final MainForm self = this;
 
         disconnectButton.addActionListener(new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                connectButton.setEnabled(true);
-                disconnectButton.setEnabled(false);
-                sendButton.setEnabled(false);
-                yourMessageField.setEditable(false);
-                try {
-                    connection.disconnect();
-                } catch (IOException e1) {
-                    e1.printStackTrace();
+                Object[] options = { "Yes, really!", "No, it's mistake!" };
+                int choise = JOptionPane.showOptionDialog(mainFrame,
+                                "You are connected to "+remoteLoginTextField.getText()+". You really want to disconnect the connection?",
+                                "Disconnect...", JOptionPane.YES_NO_OPTION,
+                                JOptionPane.QUESTION_MESSAGE,null,options,options[0]);
+                if (choise == JOptionPane.YES_OPTION){
+                    waitMode();
+                    try {
+                        connection.disconnect();
+                    } catch (IOException e1) {
+                        e1.printStackTrace();
+                    }
+                    commandListenerThread.stop();
+                    remoteLoginTextField.setText("");
+                    remoteAddressTextField.setText("");
                 }
             }
         });
@@ -163,9 +165,9 @@ public class MainForm implements Observer{
                 else {
                     try {
                         connection.sendMessage(yourMessageField.getText());
-                        messagesArea.append(yourMessageField.getText() + '\n');
-                        //Command c=connection.receive();
-                        //messagesArea.append(c.toString());
+                        Date d=new Date();
+                        SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy hh:mm:ss");
+                        messagesArea.append(yourMessageField.getText() +"             "+dateFormat.format(d) +'\n');
                     } catch (IOException e1) {
                         e1.printStackTrace();
                     }
@@ -194,19 +196,17 @@ public class MainForm implements Observer{
         applyButton.addActionListener(new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                /*if (callListenerThread==null){
-                    callListenerThread=new CallListenerThread(new CallListener(loginTextField.getText()));
-                }
-                else {
-                    callListenerThread.getCallListener().setLocalNick(loginTextField.getText());
-                }
-                applyButton.setSelected(false);*/
                 if (!loginTextField.getText().equals("")){
                     localNick = loginTextField.getText();
                     callListenerThread.setLocalNick(localNick);
                 }
+                SwingUtilities.invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        JOptionPane.showMessageDialog(mainFrame,"Your log in as "+localNick+". Welcome!");
+                    }
+                });
             }
-
         });
 
         connectButton.addActionListener(new AbstractAction() {
@@ -216,68 +216,127 @@ public class MainForm implements Observer{
                     JOptionPane.showMessageDialog(mainFrame,"Insufficient data. Please, enter a remote login and a remote adress!");
                 }
                 else {
-                    caller=new Caller(loginTextField.getText(),remoteAddressTextField.getText());
+                    caller=new Caller(localNick,remoteAddressTextField.getText());
                     try {
                         connection = caller.call();
                     } catch (IOException e1) {
-                        e1.printStackTrace();
+                        JOptionPane.showMessageDialog(mainFrame,"Error! There is not internet connection.");
                     }
+                    remoteLoginTextField.setText(caller.getRemoteNick());
                     if (connection == null){
-
+                        switch (caller.getStatus()){
+                            case NOT_ACCESSIBLE:{
+                                JOptionPane.showMessageDialog(mainFrame,"User/line is not accessible!");
+                            break;
+                            }
+                            case NO_SERVICE:{
+                                JOptionPane.showMessageDialog(mainFrame,"User has not served!");
+                            break;
+                            }
+                            case BUSY:{
+                                JOptionPane.showMessageDialog(mainFrame,"User/line is busy!");
+                            break;
+                            }
+                            case REJECTED:{
+                                JOptionPane.showMessageDialog(mainFrame,"User has rejected call!");
+                            }
+                        }
                     }
-                    else {
+                    else if (caller.getStatus()== Caller.CallStatus.valueOf("OK")){
+                        dialogMode();
+                        JOptionPane.showMessageDialog(mainFrame,"User "+caller.getRemoteNick()+" successfully accepted!");
                         commandListenerThread = new CommandListenerThread(connection);
-                        addCommandObserver();
-                        remoteLoginTextField.setText(caller.getRemoteNick());
-                        commandListenerThread.start();
-                        addCommandObserver();
-                    }
-                    /*Thread t=new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            connectButton.setSelected(false);
-                            disconnectButton.setSelected(true);
-                            try {
-                                connection = caller.call();
-                                if (caller.getStatus()== Caller.CallStatus.valueOf("OK")){
-                                    remoteLoginTextField.setText(caller.getRemoteNick());
-                                }
-                                else {
-                                    if (caller.getStatus()== Caller.CallStatus.valueOf("BUSY")){
-                                        JOptionPane.showMessageDialog(mainFrame,"User "+caller.getRemoteNick()+" is busy now.");
-                                        connection=null;
-                                    }
-                                    else {
-                                        if (caller.getStatus()== Caller.CallStatus.valueOf("REJECT")){
-                                            JOptionPane.showMessageDialog(mainFrame,"User "+caller.getRemoteNick()+" has rejected your call.");
-                                            connection=null;
+                        commandListenerThread.addObserver(new Observer() {
+                            @Override
+                            public void update(Observable o, Object arg) {
+                                if (commandListenerThread.getLastCommand() != null && !commandListenerThread.isDisconnected()){
+                                    if (commandListenerThread.getLastCommand() instanceof NickCommand){
+                                        remoteLoginTextField.setText(((NickCommand) commandListenerThread.getLastCommand()).getNick());
+                                        try {
+                                            callListenerThread.getLastConnection().accept();
+                                        } catch (IOException e) {
+                                            e.printStackTrace();
                                         }
-                                        else {
-                                            if (caller.getStatus()== Caller.CallStatus.valueOf("NOT_ACCESSIBLE")){
-                                                JOptionPane.showMessageDialog(mainFrame,"No internet connection!");
+                                    }
+                                    else if (commandListenerThread.getLastCommand() instanceof MessageCommand){
+                                        SwingUtilities.invokeLater(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                Date d=new Date();
+                                                SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy hh:mm:ss");
+                                                messagesArea.append(((MessageCommand) commandListenerThread.getLastCommand()).toString() + "             " +dateFormat.format(d) +'\n');
+                                                //messagesArea.append(((MessageCommand) commandListenerThread.getLastCommand()).toString() + "\n");
+                                            }
+                                        });
+                                    }
+                                    else if (commandListenerThread.getLastCommand().getCommandType()!=null){
+                                        switch (commandListenerThread.getLastCommand().getCommandType()){
+                                            case ACCEPT:{
+                                                callListenerThread.setBusy(true);
+                                                dialogMode();
+                                                break;
+                                            }
+                                            case REJECT:{
+                                                callListenerThread.setBusy(false);
+                                                commandListenerThread.stop();
                                                 connection=null;
+                                                SwingUtilities.invokeLater(new Runnable() {
+                                                    @Override
+                                                    public void run() {
+                                                        JOptionPane.showMessageDialog(mainFrame, "User " + caller.getRemoteNick() + " has rejected your call.");
+                                                    }
+                                                });
+                                                waitMode();
+                                                break;
+                                            }
+                                            case DISCONNECT:{
+                                                SwingUtilities.invokeLater(new Runnable() {
+                                                    @Override
+                                                    public void run() {
+                                                        callListenerThread.setBusy(false);
+                                                        commandListenerThread.stop();
+                                                        connection = null;
+                                                        JOptionPane.showMessageDialog(mainFrame, "User " + caller.getRemoteNick() + " has disconnected.");
+                                                    }
+                                                });
+                                                waitMode();
+                                                break;
                                             }
                                         }
                                     }
                                 }
-                            } catch (IOException e1) {
-                                JOptionPane.showMessageDialog(mainFrame,"Error 404! Couldn't connect!");
-                                connection=null;
+                                else {
+                                    if (commandListenerThread.getLastCommand() instanceof MessageCommand && !commandListenerThread.isDisconnected()){
+                                        SwingUtilities.invokeLater(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                Date d=new Date();
+                                                SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy hh:mm:ss");
+                                                messagesArea.append(((MessageCommand) commandListenerThread.getLastCommand()).toString() + "             " +dateFormat.format(d) +'\n');
+                                                //messagesArea.append(((MessageCommand) commandListenerThread.getLastCommand()).toString() + "\n");
+                                            }
+                                        });
+                                    }
+                                    else {
+                                        waitMode();
+                                        commandListenerThread.stop();
+                                        connection = null;
+                                        callListenerThread.setBusy(false);
+                                    }
+                                }
                             }
-                            catch (NullPointerException e){
-                                JOptionPane.showMessageDialog(mainFrame,"No internet connection!");
+                        });
+                        remoteLoginTextField.setText(caller.getRemoteNick());
 
-                            }
-                        }
-                    });
-                    t.start();*/
+                    }
                 }
 
             }
         });
+        
         CallListener callListener = new CallListener(localNick);
         this.callListenerThread = new CallListenerThread(callListener);
-        this.callListenerThread.addObserver(new Observer() {
+        this.callListenerThread.addObserver((Observer)new Observer() {
             @Override
             public void update(Observable o, Object arg) {
                 SwingUtilities.invokeLater(new Runnable() {
@@ -286,13 +345,109 @@ public class MainForm implements Observer{
                         connection = callListenerThread.getLastConnection();
                         callListenerThread.setBusy(true);
                         commandListenerThread = new CommandListenerThread(connection);
-                        addCommandObserver();
-                        commandListenerThread.start();
+                        commandListenerThread.addObserver(new Observer() {
+                            @Override
+                            public void update(Observable o, Object arg) {
+                                if (commandListenerThread.getLastCommand() != null && !commandListenerThread.isDisconnected() && connection.isOpen()){
+                                    if (commandListenerThread.getLastCommand() instanceof NickCommand){
+                                        remoteLoginTextField.setText(((NickCommand) commandListenerThread.getLastCommand()).getNick());
+                                        try {
+                                            callListenerThread.getLastConnection().accept();
+                                        } catch (IOException e) {
+                                            e.printStackTrace();
+                                        }
+                                    }
+                                    else if (commandListenerThread.getLastCommand() instanceof MessageCommand){
+                                        SwingUtilities.invokeLater(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                Date d=new Date();
+                                                SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy hh:mm:ss");
+                                                messagesArea.append(((MessageCommand) commandListenerThread.getLastCommand()).toString() + "             " +dateFormat.format(d) +'\n');
+                                                //messagesArea.append(((MessageCommand) commandListenerThread.getLastCommand()).toString() + "\n");
+                                            }
+                                        });
+                                    }
+                                    else if (commandListenerThread.getLastCommand().getCommandType()!=null){
+                                        switch (commandListenerThread.getLastCommand().getCommandType()){
+                                            case ACCEPT:{
+                                                callListenerThread.setBusy(true);
+                                                dialogMode();
+                                                break;
+                                            }
+                                            case REJECT:{
+                                                callListenerThread.setBusy(false);
+                                                connection=null;
+                                                SwingUtilities.invokeLater(new Runnable() {
+                                                    @Override
+                                                    public void run() {
+                                                        JOptionPane.showMessageDialog(mainFrame, "User " + caller.getRemoteNick() + " has rejected your call.");
+                                                    }
+                                                });
+                                                waitMode();
+                                                break;
+                                            }
+                                            case DISCONNECT:{
+                                                connection=null;
+                                                callListenerThread.setBusy(false);
+                                                commandListenerThread.stop();
+                                                SwingUtilities.invokeLater(new Runnable() {
+                                                    @Override
+                                                    public void run() {
+                                                        JOptionPane.showMessageDialog(mainFrame, "User " + caller.getRemoteNick() + " has disconnected.");
+                                                    }
+                                                });
+                                                waitMode();
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                                else {
+                                    if (commandListenerThread.getLastCommand() instanceof MessageCommand && !commandListenerThread.isDisconnected()){
+                                        SwingUtilities.invokeLater(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                Date d=new Date();
+                                                SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy hh:mm:ss");
+                                                messagesArea.append(((MessageCommand) commandListenerThread.getLastCommand()).toString() + "             " +dateFormat.format(d) +'\n');
+                                                //messagesArea.append(((MessageCommand) commandListenerThread.getLastCommand()).toString() + "\n");
+                                            }
+                                        });
+                                    }
+                                    else {
+                                        commandListenerThread.stop();
+                                        connection = null;
+                                        commandListenerThread = null;
+                                        callListenerThread.setBusy(false);
+                                    }
+                                }
+                            }
+                        });
+                        //commandListenerThread.start();
                     }
                 });
             }
+
         });
         this.callListenerThread.start();
+    }
+    public void dialogMode(){
+        connectButton.setEnabled(false);
+        disconnectButton.setEnabled(true);
+        sendButton.setEnabled(true);
+        yourMessageField.setEditable(true);
+        loginTextField.setEditable(false);
+        applyButton.setEnabled(false);
+    }
+    public void waitMode(){
+        connectButton.setEnabled(true);
+        disconnectButton.setEnabled(false);
+        sendButton.setEnabled(false);
+        yourMessageField.setEditable(false);
+        loginTextField.setEditable(true);
+        applyButton.setEnabled(true);
+        messagesArea.setText("");
     }
     public static void main(String[] args) throws IOException {
         EventQueue.invokeLater(new Runnable() {
@@ -306,101 +461,4 @@ public class MainForm implements Observer{
             }
         });
     }
-    public void addCommandObserver(){
-        this.commandListenerThread.addObserver(new Observer() {
-            @Override
-            public void update(Observable o, Object arg) {
-                if (commandListenerThread.getLastCommand() != null){
-                    if (commandListenerThread.getLastCommand() instanceof NickCommand){
-                        remoteLoginTextField.setText(((NickCommand) commandListenerThread.getLastCommand()).getNick());
-                        try {
-                            callListenerThread.getLastConnection().accept();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                        commandListenerThread.stop();
-                    }
-                    else if (commandListenerThread.getLastCommand() instanceof MessageCommand){
-                        SwingUtilities.invokeLater(new Runnable() {
-                            @Override
-                            public void run() {
-                                messagesArea.append("Back: "+((MessageCommand) commandListenerThread.getLastCommand()).toString() + "\n");
-                            }
-                        });
-                    }
-                    else if (commandListenerThread.getLastCommand().getCommandType()!=null){
-                        switch (commandListenerThread.getLastCommand().getCommandType()){
-                            case ACCEPT:{
-                                callListenerThread.setBusy(true);
-                                break;
-                            }
-                            case REJECT:{
-                                callListenerThread.setBusy(false);
-                                SwingUtilities.invokeLater(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        JOptionPane.showMessageDialog(mainFrame, "User " + caller.getRemoteNick() + " has rejected your call.");
-                                        connection=null;
-                                    }
-                                });
-                                break;
-                            }
-                            case DISCONNECT:{
-                                SwingUtilities.invokeLater(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        JOptionPane.showMessageDialog(mainFrame, "User " + caller.getRemoteNick() + " has disconnected.");
-                                        connection=null;
-                                    }
-                                });
-                                callListenerThread.setBusy(false);
-                                commandListenerThread = null;
-                                connection = null;
-                                break;
-                            }
-                        }
-                    }
-                }
-                else {
-                    commandListenerThread.stop();
-                    connection = null;
-                    commandListenerThread = null;
-                    callListenerThread.setBusy(false);
-                }
-            }
-        });
-    }
-
-    @Override
-    public void update(Observable o, Object arg) {
-
-    }
-    /*@Override
-    public void update(Observable o, Object arg) {
-        if (arg == CallListener.class){
-            messagesArea.append("good");
-            CallListener callListener= (CallListener) arg;
-            callListenerThread.resume();
-            System.out.println("1");
-
-        }
-        else {
-            messagesArea.append("asd");
-            if (arg == Connection.class){
-                connection = (Connection) arg;
-                System.out.println("2");
-            }
-            else {
-                messagesArea.append("123");
-                Command command=(Command) arg;
-                if (command.getCommandType()== Command.CommandType.valueOf("MESSAGE")){
-                    System.out.println("3");
-                    messagesArea.append("Back: "+command.toString()+'\n');
-                    //messagesArea.setText("Back: "+command.toString());
-                    //messagesArea.insert("Back: "+command.toString(),messagesArea.getLineCount()+1);
-
-                }
-            }
-        }
-    }*/
 }

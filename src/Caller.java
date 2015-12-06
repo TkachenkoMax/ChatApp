@@ -46,7 +46,6 @@ public class Caller {
     }
 
     public Connection call() throws IOException {
-        //Socket socket = null;
         try {
             Socket socket=null;
             try {
@@ -54,8 +53,8 @@ public class Caller {
             }
             catch (NullPointerException e){
                 callStatus = CallStatus.valueOf("NOT_ACCESSIBLE");
+                return null;
             }
-            //socket.connect(socket.getRemoteSocketAddress());
             Connection connection = new Connection(socket);
             Command command = connection.receive();
             if (command.getCommandType() == Command.CommandType.valueOf("NICK")) {

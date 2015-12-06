@@ -11,10 +11,12 @@ public class CallListener {
 
     public CallListener() {
         this.localNick = "unnamed";
+        this.listenAddress = new InetSocketAddress(PORT);
     }
 
     public CallListener(String localNick) {
         this.localNick = localNick;
+        this.listenAddress = new InetSocketAddress(PORT);
     }
 
     public CallListener(String localNick, String lockalIp) throws IOException {
@@ -34,14 +36,6 @@ public class CallListener {
             remoteAddress = (InetSocketAddress) socket.getRemoteSocketAddress();
             return connection;
         } else return null;
-        /*if (isBusy()) {
-            connection.SendNickBusy(localNick);
-            connection.close();
-            return null;
-        } else {
-            setBusy(true);
-            return connection;
-        }*/
     }
 
     public String getLocalNick() {
