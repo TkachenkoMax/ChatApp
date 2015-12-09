@@ -167,7 +167,7 @@ public class MainForm extends JFrame {
                         connection.sendMessage(yourMessageField.getText());
                         Date d=new Date();
                         SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy hh:mm:ss");
-                        messagesArea.append(yourMessageField.getText() +"             "+dateFormat.format(d) +'\n');
+                        messagesArea.append(localNick+": "+yourMessageField.getText() +"             "+dateFormat.format(d) +'\n');
                     } catch (IOException e1) {
                         e1.printStackTrace();
                     }
@@ -253,7 +253,20 @@ public class MainForm extends JFrame {
                                     if (commandListenerThread.getLastCommand() instanceof NickCommand){
                                         remoteLoginTextField.setText(((NickCommand) commandListenerThread.getLastCommand()).getNick());
                                         try {
-                                            callListenerThread.getLastConnection().accept();
+                                            Object[] options = { "Yes!", "No, I'm reject" };
+                                            int choise = JOptionPane.showOptionDialog(mainFrame,
+                                                    "User "+remoteLoginTextField.getText()+" wants to chat. Do you you want to accept this call?",
+                                                    "Incoming connection...", JOptionPane.YES_NO_OPTION,
+                                                    JOptionPane.QUESTION_MESSAGE,null,options,options[0]);
+                                            if (choise == JOptionPane.YES_OPTION){
+                                                callListenerThread.getLastConnection().accept();
+                                                dialogMode();
+                                            }
+                                            else {
+                                                if (choise == JOptionPane.NO_OPTION){
+                                                    callListenerThread.getLastConnection().reject();
+                                                }
+                                            }
                                         } catch (IOException e) {
                                             e.printStackTrace();
                                         }
@@ -264,7 +277,7 @@ public class MainForm extends JFrame {
                                             public void run() {
                                                 Date d=new Date();
                                                 SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy hh:mm:ss");
-                                                messagesArea.append(((MessageCommand) commandListenerThread.getLastCommand()).toString() + "             " +dateFormat.format(d) +'\n');
+                                                messagesArea.append(remoteLoginTextField.getText()+": "+((MessageCommand) commandListenerThread.getLastCommand()).toString() + "             " +dateFormat.format(d) +'\n');
                                                 //messagesArea.append(((MessageCommand) commandListenerThread.getLastCommand()).toString() + "\n");
                                             }
                                         });
@@ -312,7 +325,7 @@ public class MainForm extends JFrame {
                                             public void run() {
                                                 Date d=new Date();
                                                 SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy hh:mm:ss");
-                                                messagesArea.append(((MessageCommand) commandListenerThread.getLastCommand()).toString() + "             " +dateFormat.format(d) +'\n');
+                                                messagesArea.append(remoteLoginTextField.getText()+": "+((MessageCommand) commandListenerThread.getLastCommand()).toString() + "             " +dateFormat.format(d) +'\n');
                                                 //messagesArea.append(((MessageCommand) commandListenerThread.getLastCommand()).toString() + "\n");
                                             }
                                         });
@@ -336,7 +349,7 @@ public class MainForm extends JFrame {
         
         CallListener callListener = new CallListener(localNick);
         this.callListenerThread = new CallListenerThread(callListener);
-        this.callListenerThread.addObserver((Observer)new Observer() {
+        callListenerThread.addObserver(new Observer() {
             @Override
             public void update(Observable o, Object arg) {
                 SwingUtilities.invokeLater(new Runnable() {
@@ -352,7 +365,20 @@ public class MainForm extends JFrame {
                                     if (commandListenerThread.getLastCommand() instanceof NickCommand){
                                         remoteLoginTextField.setText(((NickCommand) commandListenerThread.getLastCommand()).getNick());
                                         try {
-                                            callListenerThread.getLastConnection().accept();
+                                            Object[] options = { "Yes!", "No, I'm reject" };
+                                            int choise = JOptionPane.showOptionDialog(mainFrame,
+                                                    "User "+remoteLoginTextField.getText()+" wants to chat. Do you you want to accept this call?",
+                                                    "Incoming connection...", JOptionPane.YES_NO_OPTION,
+                                                    JOptionPane.QUESTION_MESSAGE,null,options,options[0]);
+                                            if (choise == JOptionPane.YES_OPTION){
+                                                callListenerThread.getLastConnection().accept();
+                                                dialogMode();
+                                            }
+                                            else {
+                                                if (choise == JOptionPane.NO_OPTION){
+                                                    callListenerThread.getLastConnection().reject();
+                                                }
+                                            }
                                         } catch (IOException e) {
                                             e.printStackTrace();
                                         }
@@ -363,7 +389,7 @@ public class MainForm extends JFrame {
                                             public void run() {
                                                 Date d=new Date();
                                                 SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy hh:mm:ss");
-                                                messagesArea.append(((MessageCommand) commandListenerThread.getLastCommand()).toString() + "             " +dateFormat.format(d) +'\n');
+                                                messagesArea.append(remoteLoginTextField.getText()+": "+((MessageCommand) commandListenerThread.getLastCommand()).toString() + "             " +dateFormat.format(d) +'\n');
                                                 //messagesArea.append(((MessageCommand) commandListenerThread.getLastCommand()).toString() + "\n");
                                             }
                                         });
@@ -410,7 +436,7 @@ public class MainForm extends JFrame {
                                             public void run() {
                                                 Date d=new Date();
                                                 SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy hh:mm:ss");
-                                                messagesArea.append(((MessageCommand) commandListenerThread.getLastCommand()).toString() + "             " +dateFormat.format(d) +'\n');
+                                                messagesArea.append(remoteLoginTextField.getText()+": "+((MessageCommand) commandListenerThread.getLastCommand()).toString() + "             " +dateFormat.format(d) +'\n');
                                                 //messagesArea.append(((MessageCommand) commandListenerThread.getLastCommand()).toString() + "\n");
                                             }
                                         });
@@ -424,7 +450,6 @@ public class MainForm extends JFrame {
                                 }
                             }
                         });
-                        //commandListenerThread.start();
                     }
                 });
             }
