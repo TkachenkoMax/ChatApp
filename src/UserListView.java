@@ -1,6 +1,9 @@
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.io.IOException;
 import java.util.Observable;
 import java.util.Observer;
 import javax.swing.*;
@@ -11,6 +14,7 @@ import javax.swing.table.DefaultTableModel;
 
 public class UserListView extends JPanel {
     private UserListModel model;
+    private LocalContactList localContactList;
     private JTable table = new JTable();
     private JButton deleteButton = new JButton("Delete");
     private JButton clearButton = new JButton("Clear");
@@ -18,12 +22,13 @@ public class UserListView extends JPanel {
 
 
     public UserListView() {
-        this(null);
+        this(null,null);
     }
 
-    public UserListView(UserListModel model) {
+    public UserListView(UserListModel model, LocalContactList localContactList) {
         if (model != null) {
         }
+        this.localContactList=localContactList;
         this.setModel(model);
         GridBagLayout layout = new GridBagLayout();
         this.setLayout(layout);
@@ -56,7 +61,18 @@ public class UserListView extends JPanel {
             public void actionPerformed(ActionEvent arg0) {
                 int pos = UserListView.this.table.getSelectedRow();
                 if (pos >= 0) {
-                    UserListView.this.model.delete(UserListView.this.model.getNickAt(pos));
+                    if (UserListView.this.localContactList.containsKey(UserListView.this.model.getNickAt(pos))){
+                        UserListView.this.localContactList.delete(UserListView.this.model.getNickAt(pos));
+                        UserListView.this.model.delete(UserListView.this.model.getNickAt(pos));
+                        try {
+                            UserListView.this.localContactList.writeContacts();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    else {
+                        UserListView.this.model.delete(UserListView.this.model.getNickAt(pos));
+                    }
                 }
             }
         });
@@ -65,8 +81,14 @@ public class UserListView extends JPanel {
             @Override
             public void actionPerformed(ActionEvent e) {
                 UserListView.this.model.clear();
+                try {
+                    UserListView.this.localContactList.clear();
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
             }
         });
+
     }
 
     public void setModel(UserListModel model) {
@@ -77,7 +99,9 @@ public class UserListView extends JPanel {
         this.model = model;
         this.table.setModel(new ModelForTable(model));
     }
-
+    public UserListModel getModel(){
+        return model;
+    }
     public void addSelectionListener(ListSelectionListener listener) {
         ListSelectionModel model = this.table.getSelectionModel();
         model.addListSelectionListener(listener);
@@ -86,7 +110,9 @@ public class UserListView extends JPanel {
     public int getSelectedRow() {
         return this.table.getSelectedRow();
     }
-
+    public JTable getTable(){
+        return table;
+    }
     private class ModelForTable extends AbstractTableModel implements Observer {
         private UserListModel ul_model;
 

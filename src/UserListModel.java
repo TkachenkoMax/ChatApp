@@ -32,7 +32,14 @@ public class UserListModel extends Observable {
         this.setChanged();
         this.notifyObservers();
     }
-
+    public boolean containsValue(String ip){
+        if (contacts.containsValue(ip)) return true;
+        else return false;
+    }
+    public boolean containsKey(String nick){
+        if (contacts.containsKey(nick)) return true;
+        else return false;
+    }
     public boolean delete(String key) {
         boolean ret = this.contacts.containsKey(key);
         this.contacts.remove(key);

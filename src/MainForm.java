@@ -2,9 +2,7 @@ import javax.swing.*;
 import javax.swing.border.LineBorder;
 import javax.xml.soap.Text;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
+import java.awt.event.*;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.Socket;
@@ -13,7 +11,7 @@ import java.util.Date;
 import java.util.Observable;
 import java.util.Observer;
 
-public class MainForm extends JFrame {
+public class MainForm extends JFrame implements Observer {
     private JFrame mainFrame;
     private JPanel mainPanel;
     private JLabel loginLabel;
@@ -38,6 +36,8 @@ public class MainForm extends JFrame {
     private ServerConnection server;
     private UserListView userListView;
     private UserListModel userListModel;
+    private LocalContactList localContactList;
+    private static final String PATH = "loc_con.txt";
     private String localNick = "unnamed";
 
     public MainForm() {  // TODO
@@ -89,7 +89,7 @@ public class MainForm extends JFrame {
         remoteAddressLabel.setHorizontalAlignment(SwingConstants.RIGHT);
 
         remoteAddressTextField = new JTextField();
-        remoteAddressTextField.setText("files.litvinov.in.ua");
+        //remoteAddressTextField.setText("files.litvinov.in.ua");
         disconnectButton = new JButton("Disconnect");
         disconnectButton.setBackground(new Color(0xDD5140));
         disconnectButton.setForeground(Color.WHITE);
@@ -123,17 +123,68 @@ public class MainForm extends JFrame {
         yourMessageScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
 
         userListModel = new UserListModel();
-        userListView = new UserListView(userListModel);
+        localContactList = new LocalContactList(PATH);
+        userListView = new UserListView(userListModel, localContactList);
+        userListView.getTable().addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    int pos = userListView.getSelectedRow();
+                    if (pos >= 0) {
+                        if (connectButton.isEnabled()) {
+                            remoteLoginTextField.setText(userListView.getModel().getNickAt(pos));
+                            remoteAddressTextField.setText(userListView.getModel().getIpFor(userListView.getModel().getNickAt(pos)));
+                        } else {
+                            SwingUtilities.invokeLater(new Runnable() {
+                                @Override
+                                public void run() {
+                                    JOptionPane.showMessageDialog(mainFrame, "You already have connection!");
+                                }
+                            });
+                        }
+                    }
+                }
+            }
 
+            @Override
+            public void mousePressed(MouseEvent e) {
+
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+
+            }
+        });
         this.server = new ServerConnection("jdbc:mysql://files.litvinov.in.ua/chatapp_server");
         String[] nicks;
         nicks = this.server.getAllNicks();
+        try {
+            localContactList.readContacts();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         int n = nicks.length;
         int n2 = 0;
         while (n2 < n) {
             String val = nicks[n2];
             this.userListModel.add(val, this.server.getIpForNick(val));
             ++n2;
+        }
+        n2 = localContactList.getSize();
+        for (int i = 0; i < n2; i++) {
+            String val = localContactList.getNickAt(i);
+            this.userListModel.add(val, this.localContactList.getIpFor(val));
         }
 
         mainPanel.add(loginLabel, new GridBagConstraints(0, 0, 1, 1, 1, 0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(2, 2, 2, 2), 0, 0));
@@ -146,7 +197,7 @@ public class MainForm extends JFrame {
         mainPanel.add(remoteAddressLabel, new GridBagConstraints(2, 1, 1, 1, 1, 0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(2, 2, 2, 2), 0, 0));
         mainPanel.add(remoteAddressTextField, new GridBagConstraints(3, 1, 2, 1, 1, 0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(2, 2, 2, 2), 0, 0));
         mainPanel.add(disconnectButton, new GridBagConstraints(5, 1, 1, 1, 1, 0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(2, 2, 2, 2), 0, 0));
-        mainPanel.add(messagesScrollPane, new GridBagConstraints(0, 2, GridBagConstraints.REMAINDER, 1, 1, 1, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(2, 2, 2, 2), 0, 0));
+        mainPanel.add(messagesScrollPane, new GridBagConstraints(1, 2, GridBagConstraints.REMAINDER, 1, 1, 1, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(2, 2, 2, 2), 0, 0));
         mainPanel.add(yourMessageScrollPane, new GridBagConstraints(0, 3, 5, 1, 1, 0.025, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(2, 2, 2, 2), 0, 0));
         mainPanel.add(sendButton, new GridBagConstraints(5, 3, 1, 1, 1, 0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(2, 2, 2, 2), 0, 0));
 
@@ -162,6 +213,22 @@ public class MainForm extends JFrame {
                         "Disconnect...", JOptionPane.YES_NO_OPTION,
                         JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
                 if (choise == JOptionPane.YES_OPTION) {
+                    if (!userListModel.containsKey(remoteLoginTextField.getText())) {
+                        Object[] options1 = {"Add!", "No!"};
+                        int choise1 = JOptionPane.showOptionDialog(mainFrame,
+                                "Do you want to add " + remoteLoginTextField.getText() + " to your contacts list?",
+                                "Add new friend", JOptionPane.YES_NO_OPTION,
+                                JOptionPane.QUESTION_MESSAGE, null, options1, options1[0]);
+                        if (choise == JOptionPane.YES_OPTION) {
+                            userListModel.add(remoteLoginTextField.getText(), remoteAddressTextField.getText());
+                            localContactList.add(remoteLoginTextField.getText(), remoteAddressTextField.getText());
+                            try {
+                                localContactList.writeContacts();
+                            } catch (IOException e1) {
+                                e1.printStackTrace();
+                            }
+                        }
+                    }
                     waitMode();
                     try {
                         connection.disconnect();
@@ -195,14 +262,14 @@ public class MainForm extends JFrame {
         yourMessageField.addKeyListener(new KeyListener() {
             @Override
             public void keyTyped(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-                    sendButton.doClick();
-                }
+
             }
 
             @Override
             public void keyPressed(KeyEvent e) {
-
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    sendButton.doClick();
+                }
             }
 
             @Override
@@ -359,7 +426,7 @@ public class MainForm extends JFrame {
 
         CallListener callListener = new CallListener(localNick);
         this.callListenerThread = new CallListenerThread(callListener);
-        this.callListenerThread.addObserver((Observer) new Observer() {
+        /*this.callListenerThread.addObserver((Observer) new Observer() {
             @Override
             public void update(Observable o, Object arg) {
                 if (arg instanceof Connection)
@@ -460,7 +527,7 @@ public class MainForm extends JFrame {
                     });
             }
 
-        });
+        });*/
         this.callListenerThread.start();
     }
 
@@ -483,16 +550,117 @@ public class MainForm extends JFrame {
         messagesArea.setText("");
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, ClassNotFoundException {
         EventQueue.invokeLater(new Runnable() {
             public void run() {
                 try {
                     window = new MainForm();
                     window.mainFrame.setVisible(true);
+
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
         });
+    }
+
+    @Override
+    public void update(Observable o, Object arg) {
+        if (arg instanceof Connection)
+            SwingUtilities.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    connection = callListenerThread.getLastConnection();
+                    callListenerThread.setBusy(true);
+                    commandListenerThread = new CommandListenerThread(connection);
+                    commandListenerThread.addObserver(new Observer() {
+                        @Override
+                        public void update(Observable o, Object arg) {
+                            if (commandListenerThread.getLastCommand() != null && !commandListenerThread.isDisconnected() && connection.isOpen()) {
+                                if (commandListenerThread.getLastCommand() instanceof NickCommand) {
+                                    remoteLoginTextField.setText(((NickCommand) commandListenerThread.getLastCommand()).getNick());
+                                    try {
+                                        Object[] options = {"Yes!", "No, I'm reject"};
+                                        int choise = JOptionPane.showOptionDialog(mainFrame,
+                                                "User " + remoteLoginTextField.getText() + " wants to chat. Do you you want to accept this call?",
+                                                "Incoming connection...", JOptionPane.YES_NO_OPTION,
+                                                JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
+                                        if (choise == JOptionPane.YES_OPTION) {
+                                            callListenerThread.getLastConnection().accept();
+                                            dialogMode();
+                                        } else {
+                                            if (choise == JOptionPane.NO_OPTION) {
+                                                callListenerThread.getLastConnection().reject();
+                                            }
+                                        }
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                } else if (commandListenerThread.getLastCommand() instanceof MessageCommand) {
+                                    SwingUtilities.invokeLater(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            Date d = new Date();
+                                            SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy hh:mm:ss");
+                                            messagesArea.append(remoteLoginTextField.getText() + ": " + ((MessageCommand) commandListenerThread.getLastCommand()).toString() + "             " + dateFormat.format(d) + '\n');
+                                            //messagesArea.append(((MessageCommand) commandListenerThread.getLastCommand()).toString() + "\n");
+                                        }
+                                    });
+                                } else if (commandListenerThread.getLastCommand().getCommandType() != null) {
+                                    switch (commandListenerThread.getLastCommand().getCommandType()) {
+                                        case ACCEPT: {
+                                            callListenerThread.setBusy(true);
+                                            dialogMode();
+                                            break;
+                                        }
+                                        case REJECT: {
+                                            callListenerThread.setBusy(false);
+                                            connection = null;
+                                            SwingUtilities.invokeLater(new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                    JOptionPane.showMessageDialog(mainFrame, "User " + caller.getRemoteNick() + " has rejected your call.");
+                                                }
+                                            });
+                                            waitMode();
+                                            break;
+                                        }
+                                        case DISCONNECT: {
+                                            connection = null;
+                                            callListenerThread.setBusy(false);
+                                            commandListenerThread.stop();
+                                            SwingUtilities.invokeLater(new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                    JOptionPane.showMessageDialog(mainFrame, "User " + caller.getRemoteNick() + " has disconnected.");
+                                                }
+                                            });
+                                            waitMode();
+                                            break;
+                                        }
+                                    }
+                                }
+                            } else {
+                                if (commandListenerThread.getLastCommand() instanceof MessageCommand && !commandListenerThread.isDisconnected()) {
+                                    SwingUtilities.invokeLater(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            Date d = new Date();
+                                            SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy hh:mm:ss");
+                                            messagesArea.append(remoteLoginTextField.getText() + ": " + ((MessageCommand) commandListenerThread.getLastCommand()).toString() + "             " + dateFormat.format(d) + '\n');
+                                            //messagesArea.append(((MessageCommand) commandListenerThread.getLastCommand()).toString() + "\n");
+                                        }
+                                    });
+                                } else {
+                                    commandListenerThread.stop();
+                                    connection = null;
+                                    commandListenerThread = null;
+                                    callListenerThread.setBusy(false);
+                                }
+                            }
+                        }
+                    });
+                }
+            });
     }
 }
